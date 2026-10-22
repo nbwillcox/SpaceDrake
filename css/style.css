@@ -1,0 +1,11 @@
+html, body { margin: 0; height: 100%; background: #0b1020; overflow: hidden; font-family: system-ui, "Segoe UI", sans-serif; }
+#c { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+#hint {
+  position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%);
+  background: rgba(10, 16, 32, 0.72); color: #cfe9ff; padding: 8px 16px; border-radius: 999px;
+  font-size: 14px; letter-spacing: 0.02em; cursor: pointer; white-space: nowrap; border: 1px solid rgba(111, 245, 255, 0.35);
+}
+#dbg {
+  position: fixed; left: 8px; top: 8px; margin: 0; padding: 8px 10px; display: none;
+  background: rgba(0, 0, 0, 0.55); color: #8ff; font: 12px/1.35 Consolas, monospace; border-radius: 6px; pointer-events: none;
+}
