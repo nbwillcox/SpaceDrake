@@ -38,6 +38,19 @@ export class World {
     }
   }
 
+  // Add a static box at runtime (gates, barriers).
+  addBox(b) {
+    b.dx = b.dy = b.dz = 0; b.stamp = 0; b.id = this.boxes.length;
+    this.boxes.push(b);
+    const x0 = Math.floor(b.min[0] / this.gc), x1 = Math.floor(b.max[0] / this.gc), z0 = Math.floor(b.min[2] / this.gc), z1 = Math.floor(b.max[2] / this.gc);
+    for (let cz = z0; cz <= z1; cz++) for (let cx = x0; cx <= x1; cx++) {
+      const k = cx * 4096 + cz; let a = this.grid.get(k); if (!a) { a = []; this.grid.set(k, a); } a.push(b);
+    }
+    return b;
+  }
+  // Opening a gate: sink the box far below the world so no query sees it.
+  removeBox(b) { b.min = [-1e5, -1e6, -1e5]; b.max = [-1e5 + 1, -1e6 + 1, -1e5 + 1]; b.removed = true; }
+
   // Candidate boxes near an xz rectangle (shared output array, valid until next call).
   near(x0, z0, x1, z1) {
     const out = this._out; out.length = 0;

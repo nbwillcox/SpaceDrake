@@ -62,3 +62,6 @@ html, body { margin: 0; height: 100%; background: #0b1020; overflow: hidden; fon
 #banner { position: absolute; left: 50%; top: 22%; transform: translate(-50%, -8px); font-size: clamp(34px, 5.5vw, 76px); font-weight: 800; letter-spacing: .06em; color: #fff; text-shadow: 0 0 22px rgba(80,220,255,.8), 0 4px 6px rgba(0,0,0,.5); opacity: 0; transition: opacity .5s, transform .5s; text-align: center; }
 #banner.on { opacity: 1; transform: translate(-50%, 0); }
 #banner small { display: block; font-size: .32em; letter-spacing: .25em; opacity: .8; margin-top: 4px; }
+
+#hud .suns { left: 18px; top: 134px; }
+#hud .sunico { background: radial-gradient(circle at 35% 35%, #fff6b0, #ffb82e 60%, #d9761f); border-radius: 50%; width: 22px; height: 22px; box-shadow: 0 0 10px #ffc23e; }

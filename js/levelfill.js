@@ -34,7 +34,7 @@ export function flood(spec, world, starts, opts = {}) {
   for (const [x, z] of starts) push(Math.floor(x / cs), Math.floor(z / cs));
   run();
   // virtual links: iterate until stable
-  const vlinks = (spec.links || []).filter((l) => l.type === 'gap' || l.type === 'bridge');
+  const vlinks = (spec.links || []).filter((l) => l.type === 'gap' || l.type === 'bridge' || l.type === 'ferry');
   let changed = true;
   while (changed) {
     changed = false;
@@ -116,7 +116,7 @@ export function linkTrails(spec, v = 1) {
       const u = i / cnt, along = s.ra + s.run * u;
       const x = s.A.x + s.dx * along, z = s.A.z + s.dz * along;
       const h = s.A.h + (s.B.h - s.A.h) * u;
-      if (s.type === 'gap' || s.type === 'bridge') {
+      if (s.type === 'gap' || s.type === 'bridge' || s.type === 'ferry') {
         const arc = s.type === 'gap' ? Math.sin(u * Math.PI) * Math.min(3.2, s.run * 0.35) : 0;
         spec.entities.push({ t: 'gem', x, z, y: h + 0.9 + arc, v });
       } else spec.entities.push({ t: 'gem', x, z, v });

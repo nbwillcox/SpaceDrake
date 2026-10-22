@@ -65,7 +65,7 @@ export function buildSpec(def) {
       h = lerp(h, nd.h + bumpy(x, z, nd.bump), t);
     }
     for (const s of segs) {
-      if (s.type === 'gap' || s.type === 'bridge') continue;
+      if (s.type === 'gap' || s.type === 'bridge' || s.type === 'ferry') continue;
       const px = x - s.A.x, pz = z - s.A.z;
       const along = px * s.dx + pz * s.dz, lat = Math.abs(px * s.dz - pz * s.dx);
       if (along < s.ra - s.edge || along > s.len - s.rb + s.edge || lat > s.w / 2 + s.edge) continue;
@@ -111,6 +111,17 @@ export function buildSpec(def) {
       spec.boxes.push({ min: [x - hw, top - 0.35, z - hw], max: [x + hw, top, z + hw], color: def.bridgeColor || 0xb98a55, edge: 0x7a5530, plank: true });
     }
   }
+  // ferries: a moving platform shuttling between two nodes of equal height
+  for (const sg of segs) {
+    if (sg.type !== 'ferry') continue;
+    const mid = sg.ra + sg.run / 2, x = sg.A.x + sg.dx * mid, z = sg.A.z + sg.dz * mid, top = sg.A.h, hw = sg.w / 2;
+    const amp = Math.max(0, sg.run / 2 - hw - 0.3);
+    spec.boxes.push({ min: [x - hw, top - 0.4, z - hw], max: [x + hw, top, z + hw], color: def.ferryColor || 0xe39a4b, edge: 0x8a4f1f, move: { amp: [sg.dx * amp, 0, sg.dz * amp], period: sg.L.period || 9, phase: 0 } });
+  }
+  // vent columns attached to links
+  for (const L of links) if (L.vent) spec.entities.push({ t: 'vent', x: L.vent.x, z: L.vent.z, r: L.vent.r || 2.4, h: L.vent.h, power: L.vent.power || 8.5 });
+  for (const L of links) if (L.spring) spec.entities.push({ t: 'spring', x: L.spring.x, z: L.spring.z, power: L.spring.power || 21 });
+  if (def.decor) for (const d of def.decor(ctx)) { d.y = d.y === undefined ? height(d.x, d.z) : d.y; spec.decor.push(Object.assign({ s: 1, ry: 0, v: 0.5 }, d)); if (d.solid) { const hw = d.solid * d.s * 0.5; spec.boxes.push({ min: [d.x - hw, d.y - 0.5, d.z - hw], max: [d.x + hw, d.y + (d.solidH || 3) * d.s, d.z + hw], hidden: true }); } }
   if (def.fill) applyFill(spec, def.fill);
   if (def.trails) linkTrails(spec, def.trails);
   scatter(spec, def.scatter || []);

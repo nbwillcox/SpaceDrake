@@ -34,7 +34,7 @@ export class Player {
     this.chargeT = 0; this.chargeCool = 0; this.chargeYaw = yaw; this.carryT = 0; this.bumpT = 0;
     this.flameT = 0; this.flameCool = 0; this.flameId = 0; this.stunT = 0;
     this.slideNx = 0; this.slideNz = 0; this.groundBox = null;
-    this.airTime = 0; this.dead = false;
+    this.airTime = 0; this.dead = false; this.updraft = 0; this.bumpFlag = null;
   }
 
   get speedH() { return Math.hypot(this.vx, this.vz); }
@@ -45,6 +45,7 @@ export class Player {
     const w = this.w;
     this.px = this.x; this.py = this.y; this.pz = this.z; this.pyaw = this.yaw;
     this.events.length = 0;
+    this.bumpFlag = null;
 
     this.coyote = Math.max(0, this.coyote - dt);
     this.jumpBuf = Math.max(0, this.jumpBuf - dt);
@@ -130,7 +131,11 @@ export class Player {
     if (this.gliding && !inp.jumpHeld) { this.gliding = false; this.events.push({ type: 'glideEnd' }); }
 
     // ---- vertical velocity
-    if (!this.onGround) {
+    if (this.updraft > 0) {
+      this.vy += (this.updraft - this.vy) * (1 - Math.exp(-4 * dt));
+      if (this.onGround) { this.onGround = false; this.y += 0.02; }
+      this.groundBox = null; this.updraft = 0;
+    } else if (!this.onGround) {
       if (this.gliding) {
         this.vy += (P.glideFall - this.vy) * (1 - Math.exp(-6 * dt));
       } else {
@@ -147,6 +152,7 @@ export class Player {
       const wanted = P.chargeSpeed * dt, got = Math.hypot(this.x - ox, this.z - oz);
       if (got < wanted * 0.35) {
         this.events.push({ type: 'bump', nx: this._wall.nx, nz: this._wall.nz });
+        this.bumpFlag = { yaw: this.chargeYaw };
         this._endCharge(true);
       }
     }
@@ -156,6 +162,12 @@ export class Player {
     const lim = P.radius;
     this.x = clamp(this.x, lim, w.size - lim); this.z = clamp(this.z, lim, w.size - lim);
     if (this.y < w.killY) { this.dead = true; this.events.push({ type: 'fall' }); }
+  }
+
+  // Spring pads and the like.
+  bounce(vy) {
+    this.vy = vy; this.onGround = false; this.sliding = false; this.gliding = false; this.jumping = false; this.groundBox = null; this.y += 0.05;
+    this.events.push({ type: 'spring' });
   }
 
   // Knockback from a hit.

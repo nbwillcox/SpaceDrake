@@ -120,6 +120,15 @@ export function makeEnemy(kind) {
     head.add(mesh(new THREE.CylinderGeometry(0.1, 0.16, 0.3, 6).rotateX(Math.PI / 2), M(0x7a1f4a), 0, 0, 0.3));
     eyes(head, 0.1, 0.22, 0.9);
     g.userData.head = head;
+  } else if (kind === 'thief') {
+    const b = mesh(ico(0.3, 1), M(0x7d8fb5), 0, 0.42, 0); b.scale.set(1, 0.9, 1.15); body.add(b);
+    body.add(mesh(new THREE.BoxGeometry(0.62, 0.14, 0.4), M(0x1b1730), 0, 0.55, 0.22));
+    eyes(body, 0.56, 0.36, 0.8);
+    body.add(mesh(new THREE.ConeGeometry(0.07, 0.22, 4), M(0x7d8fb5), 0.14, 0.82, 0), mesh(new THREE.ConeGeometry(0.07, 0.22, 4), M(0x7d8fb5), -0.14, 0.82, 0));
+    const sack = mesh(ico(0.26, 1), M(0xc9a55c), 0, 0.55, -0.34); body.add(sack);
+    body.add(mesh(ico(0.12, 0), B(0xffd23e), 0, 0.72, -0.34));
+    g.userData.legs = [mesh(ico(0.09), M(0x3f4a66), 0.15, 0.09, 0.1), mesh(ico(0.09), M(0x3f4a66), -0.15, 0.09, 0.1)];
+    g.userData.legs.forEach((l) => g.add(l));
   } else if (kind === 'brute') {
     const b = mesh(ico(0.8, 1), M(0x7a5a4a), 0, 0.85, 0); b.scale.set(1.05, 0.95, 1.1); body.add(b);
     eyes(body, 1.05, 0.62, 1.7);
@@ -176,5 +185,85 @@ export function makePortal(color, label, sub = '') {
   spr.scale.set(4.6, 1.44, 1); spr.position.y = 4.1; g.add(spr);
   g.userData.spin = (t) => { ring.rotation.z = t * 0.8; inner.rotation.z = -t * 1.6; disc.material.opacity = 0.3 + Math.sin(t * 3) * 0.08; };
   g.userData.label = spr;
+  return g;
+}
+
+export function makeSunstone() {
+  const g = new THREE.Group();
+  const core = mesh(ico(0.34, 1), B(0xffd23e)); core.scale.set(0.85, 1.2, 0.85); g.add(core);
+  const shell = mesh(ico(0.46, 1), new THREE.MeshBasicMaterial({ color: 0xffa23e, transparent: true, opacity: 0.35, wireframe: true })); shell.scale.set(0.85, 1.2, 0.85); g.add(shell);
+  const c = document.createElement('canvas'); c.width = c.height = 64;
+  const x = c.getContext('2d'); const gr = x.createRadialGradient(32, 32, 0, 32, 32, 32);
+  gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.35, 'rgba(255,255,255,0.4)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+  x.fillStyle = gr; x.fillRect(0, 0, 64, 64);
+  const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), color: 0xffc860, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }));
+  halo.scale.setScalar(2.2); g.add(halo);
+  g.userData.spin = (t) => { core.rotation.y = t * 2; shell.rotation.y = -t * 1.4; halo.scale.setScalar(2.1 + Math.sin(t * 4) * 0.25); };
+  return g;
+}
+
+export function makeVent(r, h) {
+  const g = new THREE.Group();
+  g.add(mesh(new THREE.CylinderGeometry(r * 0.9, r, 0.25, 14), M(0x6f8aa8), 0, 0.12, 0));
+  const rings = [];
+  for (let i = 0; i < 5; i++) {
+    const ring = mesh(new THREE.TorusGeometry(r * 0.8, 0.07, 5, 18).rotateX(Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xbff4ff, transparent: true, opacity: 0.6, depthWrite: false }), 0, 0, 0);
+    g.add(ring); rings.push(ring);
+  }
+  g.userData.spin = (t) => { rings.forEach((rg, i) => { const f = ((t * 0.5 + i / 5) % 1); rg.position.y = 0.3 + f * h; const s = 1 - f * 0.4; rg.scale.set(s, 1, s); rg.material.opacity = 0.7 * (1 - f); }); };
+  return g;
+}
+
+export function makeSpring() {
+  const g = new THREE.Group();
+  g.add(mesh(new THREE.CylinderGeometry(0.62, 0.7, 0.18, 10), M(0x5b4a78), 0, 0.09, 0));
+  const top = mesh(new THREE.CylinderGeometry(0.56, 0.56, 0.14, 10), M(0xff6a9b), 0, 0.42, 0); g.add(top);
+  const coil = mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.26, 8), M(0xffd23e), 0, 0.26, 0); g.add(coil);
+  g.userData.top = top; g.userData.coil = coil;
+  return g;
+}
+
+export function makeBarrier(w, h, d, by) {
+  const g = new THREE.Group();
+  const ice = by === 'flame';
+  const m = ice ? new THREE.MeshLambertMaterial({ color: 0xaee8ff, flatShading: true, transparent: true, opacity: 0.78, emissive: 0x2a7a9a }) : M(0x9a8f86);
+  g.add(mesh(new THREE.BoxGeometry(w, h, d), m, 0, h / 2, 0));
+  if (!ice) {
+    const rows = Math.max(1, Math.round(h / 0.9));
+    for (let i = 1; i < rows; i++) g.add(mesh(new THREE.BoxGeometry(w + 0.04, 0.05, d + 0.04), M(0x5a524c), 0, (h / rows) * i, 0));
+    g.add(mesh(new THREE.BoxGeometry(w * 0.5, h * 0.55, d + 0.1), M(0xc9bdb2), 0, h / 2, 0));
+  } else {
+    g.add(new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(w, h, d)), new THREE.LineBasicMaterial({ color: 0xffffff })).translateY(h / 2));
+  }
+  return g;
+}
+
+export function makeBrazier() {
+  const g = new THREE.Group();
+  g.add(mesh(new THREE.CylinderGeometry(0.1, 0.16, 1.0, 6), M(0x4a3f5f), 0, 0.5, 0));
+  g.add(mesh(new THREE.CylinderGeometry(0.42, 0.22, 0.34, 8), M(0x6a5a80), 0, 1.15, 0));
+  const flame = mesh(new THREE.ConeGeometry(0.3, 0.7, 7), new THREE.MeshBasicMaterial({ color: 0xff9a3c, transparent: true, opacity: 0.95 }), 0, 1.6, 0); flame.visible = false; g.add(flame);
+  const cold = mesh(ico(0.22, 0), M(0x3a3a48), 0, 1.35, 0); g.add(cold);
+  g.userData.flame = flame; g.userData.cold = cold;
+  return g;
+}
+
+export function makeGate(w, h, d) {
+  const g = new THREE.Group();
+  const bars = Math.max(2, Math.round(Math.max(w, d) / 0.7));
+  const along = w >= d;
+  for (let i = 0; i <= bars; i++) {
+    const t = (i / bars - 0.5) * (along ? w : d);
+    g.add(mesh(new THREE.CylinderGeometry(0.07, 0.07, h, 5), M(0x494f66), along ? t : 0, h / 2, along ? 0 : t));
+  }
+  g.add(mesh(new THREE.BoxGeometry(along ? w : 0.18, 0.14, along ? 0.18 : d), M(0x7f86a5), 0, h - 0.1, 0));
+  g.add(mesh(new THREE.BoxGeometry(along ? w : 0.18, 0.14, along ? 0.18 : d), M(0x7f86a5), 0, 0.3, 0));
+  return g;
+}
+
+export function makeSpikes(w, d) {
+  const g = new THREE.Group();
+  const nx = Math.max(1, Math.round(w / 0.7)), nz = Math.max(1, Math.round(d / 0.7));
+  for (let i = 0; i < nx; i++) for (let j = 0; j < nz; j++) g.add(mesh(new THREE.ConeGeometry(0.15, 0.7, 5), M(0xc7cbd9), (i / nx - 0.5 + 0.5 / nx) * w, 0.35, (j / nz - 0.5 + 0.5 / nz) * d));
   return g;
 }

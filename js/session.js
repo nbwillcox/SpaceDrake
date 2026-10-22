@@ -89,7 +89,7 @@ export class Session {
     let val = 0; const slots = [];
     for (const gem of g.gems) if (gem.state === 0 && g.collected.has(gem.slot)) { val += gem.v; slots.push(gem.slot); }
     const old = Save.level(this.id);
-    return { gemSlots: slots, gems: val, gemsTotal: S.gemsTotal, elders: [...g.eldersFound], eldersTotal: S.eldersTotal, done: done || old.done, time: old.time ? Math.min(old.time, this.time) : this.time, sunstones: old.sunstones || [] };
+    return { gemSlots: slots, gems: val, gemsTotal: S.gemsTotal, elders: [...g.eldersFound], eldersTotal: S.eldersTotal, done: done || old.done, time: old.time ? Math.min(old.time, this.time) : this.time, sunstones: [...g.sunFound] };
   }
   commit(done) { Save.commitLevel(this.id, this.record(done)); }
 

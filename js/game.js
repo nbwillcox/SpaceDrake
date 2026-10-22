@@ -14,8 +14,9 @@ const ENEMY = {
   hopper: { speed: 3.2, hp: 1, r: 0.45, drop: [1, 1, 2] },
   spitter: { speed: 0, hp: 1, r: 0.45, drop: [2, 2] },
   brute: { speed: 1.6, hp: 4, r: 0.95, drop: [5, 5, 10, 10] },
+  thief: { speed: 5.2, hp: 1, r: 0.45, drop: [5] },
 };
-function needText(n) { return n.elders ? `${n.elders} Elders` : n.gems ? `${n.gems} gems` : ''; }
+function needText(n) { return n.elders ? `${n.elders} Elders` : n.gems ? `${n.gems} gems` : n.done ? 'Defeat the guardian' : ''; }
 export const WICK_COLORS = [0x000000, 0xcfe9ff, 0xff9a3c, 0xffd860];
 
 export class Game {
@@ -31,7 +32,8 @@ export class Game {
     this.events = [];
     this.time = 0;
     this.hpMax = 3;
-    this.state = { gems: 0, gemsTotal: 0, hp: 1, lives: this.settings.cozy ? Infinity : 3, elders: 0, eldersTotal: 0, deaths: 0, enemies: 0, kills: 0 };
+    this.sunFound = new Set((prog && prog.sunstones) || []);
+    this.state = { sunstones: 0, sunstoneTotal: 0, gems: 0, gemsTotal: 0, hp: 1, lives: this.settings.cozy ? Infinity : 3, elders: 0, eldersTotal: 0, deaths: 0, enemies: 0, kills: 0 };
     this.invuln = 0; this.dying = 0; this.fade = 0; this.respawnAt = 0;
     this.toastText = ''; this.toastT = 0;
     this.gems = []; this.things = []; this.bolts = [];
@@ -66,6 +68,7 @@ export class Game {
 
   _spawn(e) {
     const w = this.world;
+    if (e.t === 'thief') e = Object.assign({}, e, { t: 'enemy', kind: 'thief' });
     if (e.t === 'gem') { const y = e.y !== undefined ? e.y : this.gy(e.x, e.z) + 0.65; this._newGem(e.x, y, e.z, e.v || 1, 1); return; }
     const y = e.y !== undefined ? e.y : this.gy(e.x, e.z);
     const th = { kind: e.t, x: e.x, y, z: e.z, alive: true, r: 0.6, ry: e.yaw || 0, drops: [] };
@@ -80,8 +83,36 @@ export class Game {
         th.mesh = Props.makeEnemy(e.kind); th.hx = e.x; th.hz = e.z; th.patrol = e.patrol === undefined ? 5 : e.patrol;
         th.heading = Math.random() * TAU; th.timer = rnd(0.5, 2); th.vy = 0; th.cool = rnd(0.5, 2); th.stun = 0; th.hitFlame = -1; th.hitCool = 0;
         for (const v of e.drop || d.drop) th.drops.push(this._newGem(e.x, y + 0.5, e.z, v, 0));
-        this.state.enemies++;
+        if (e.kind === 'thief') {
+          th.sunId = e.sunstone; this.state.sunstoneTotal++;
+          if (this.sunFound.has(e.sunstone)) { th.alive = false; th.mesh.visible = false; this.state.sunstones++; this.group.add(th.mesh); this.things.push(th); return; }
+        } else this.state.enemies++;
         break;
+      }
+      case 'sunstone': {
+        th.id = e.id; th.r = 1.2; th.mesh = Props.makeSunstone(); th.y = y + (e.h === undefined ? 1.1 : e.h); th.bob = Math.random() * 6;
+        this.state.sunstoneTotal++;
+        if (this.sunFound.has(e.id)) { th.alive = false; th.mesh.visible = false; this.state.sunstones++; }
+        break;
+      }
+      case 'vent': th.r = e.r || 2; th.h = e.h || 12; th.power = e.power || 8; th.mesh = Props.makeVent(th.r, th.h); break;
+      case 'spring': th.r = 0.95; th.power = e.power || 19; th.mesh = Props.makeSpring(); th.sq = 0; break;
+      case 'barrier': {
+        th.w = e.w || 3; th.hh = e.h || 3; th.d = e.d || 1.2; th.by = e.by || 'charge';
+        th.r = Math.max(th.w, th.d) / 2 + 0.5;
+        th.mesh = Props.makeBarrier(th.w, th.hh, th.d, th.by);
+        th.box = this.world.addBox({ min: [e.x - th.w / 2, y - 0.5, e.z - th.d / 2], max: [e.x + th.w / 2, y + th.hh, e.z + th.d / 2] });
+        break;
+      }
+      case 'brazier': th.r = 0.9; th.group = e.group || 'a'; th.lit = false; th.mesh = Props.makeBrazier(); break;
+      case 'gate': {
+        th.w = e.w || 4; th.hh = e.h || 3.2; th.d = e.d || 0.5; th.group = e.group || 'a'; th.open = 0; th.mesh = Props.makeGate(th.w, th.hh, th.d);
+        th.box = this.world.addBox({ min: [e.x - th.w / 2, y - 0.5, e.z - th.d / 2], max: [e.x + th.w / 2, y + th.hh, e.z + th.d / 2] });
+        break;
+      }
+      case 'spikes': { th.w = e.w || 3; th.d = e.d || 3; th.r = Math.max(th.w, th.d) / 2; th.mesh = Props.makeSpikes(th.w, th.d); th.spk = 0;
+        break;
+
       }
       case 'moth': th.mesh = Props.makeMoth(); th.r = 0.6; th.y = y + (e.h || 1.6); th.hx = e.x; th.hz = e.z; th.hy = th.y; th.hit = 'flame'; break;
       case 'lantern': th.mesh = Props.makeLantern(); th.r = 1.3; th.lit = false; break;
@@ -135,6 +166,7 @@ export class Game {
     th.alive = false; if (th.kind !== 'chest') th.mesh.visible = false;
     this.events.push({ type: th.kind === 'enemy' ? 'kill' : 'break', x: th.x, y: th.y + 0.5, z: th.z, kind: th.kind === 'enemy' ? th.ekind : th.kind });
     if (th.kind === 'enemy') this.state.kills++;
+    if (th.sunId !== undefined) this._dropSunstone(th);
     this._releaseDrops(th, 5);
   }
 
@@ -173,7 +205,7 @@ export class Game {
     const fxd = Math.sin(player.yaw), fzd = Math.cos(player.yaw);
     const alive = this.dying <= 0;
     const flaming = player.flameT > P.flameTime * 0.1 && alive;
-    const charging = player.chargeT > 0 && alive;
+    const charging = (player.chargeT > 0 || !!player.bumpFlag) && alive;
 
     // gems
     const magnet = S.hp > 0 ? 2.6 : 1.1;
@@ -222,6 +254,43 @@ export class Game {
         case 'exit': th.mesh.userData.spin(this.time); if (alive && !this.finished && dist < th.r && Math.abs(dy) < 2.5) { this.finished = true; this.events.push({ type: 'exit' }); } break;
         case 'portal': this._updatePortal(th, dt, player, dist, dy, alive); break;
         case 'enemy': this._updateEnemy(th, dt, player, inCone, inCharge, alive); break;
+        case 'sunstone': this._updateSunstone(th, dt, player, dist, dy, alive); break;
+        case 'vent': {
+          th.mesh.userData.spin(this.time);
+          if (alive && dist < th.r && py > th.y - 0.5 && py < th.y + th.h) player.updraft = th.power * Math.min(1, (th.y + th.h - py) / 2.5);
+          break;
+        }
+        case 'spring': {
+          th.sq = Math.max(0, (th.sq || 0) - dt * 4);
+          th.mesh.userData.top.position.y = 0.42 - th.sq * 0.18; th.mesh.userData.coil.scale.y = 1 - th.sq * 0.6;
+          if (alive && dist < th.r && py <= th.y + 0.9 && py >= th.y - 0.6 && player.vy <= 2) { player.bounce(th.power); th.sq = 1; this.events.push({ type: 'spring' }); }
+          break;
+        }
+        case 'barrier': {
+          const b = th.box, cx = Math.min(b.max[0], Math.max(b.min[0], px)), cz = Math.min(b.max[2], Math.max(b.min[2], pz));
+          const bd = Math.hypot(px - cx, pz - cz), ahead = (th.x - px) * fxd + (th.z - pz) * fzd;
+          const hitC = th.by === 'charge' && charging && bd < 1.15 && ahead > 0 && Math.abs(py - th.y) < th.hh;
+          const hitF = th.by === 'flame' && flaming && bd < 3.2 && ahead > -0.5 && Math.abs(py - th.y) < th.hh + 1;
+          if (hitC || hitF) { this.world.removeBox(th.box); th.alive = false; th.mesh.visible = false; this.events.push({ type: 'break', x: th.x, y: th.y + th.hh / 2, z: th.z, kind: 'barrier' }); this.toast(th.by === 'charge' ? 'Wall smashed!' : 'The ice melted!', 1.6); this._releaseDrops(th, 4); }
+          else if (flaming && th.by === 'charge' && bd < 3 && ahead > 0) { if (th.flameId !== player.flameId) { th.flameId = player.flameId; this.events.push({ type: 'clink', x: th.x, y: th.y + 1, z: th.z }); } }
+          break;
+        }
+        case 'brazier': {
+          th.mesh.userData.flame.scale.y = 1 + Math.sin(this.time * 14 + th.x) * 0.15;
+          if (!th.lit && inCone) this._lightBrazier(th);
+          break;
+        }
+        case 'gate': {
+          if (th.opening) {
+            th.open += dt / 1.2; th.mesh.position.y = th.y - th.open * (th.hh + 0.6);
+            if (th.open >= 1) { this.world.removeBox(th.box); th.alive = false; th.mesh.visible = false; }
+          }
+          break;
+        }
+        case 'spikes': {
+          if (alive && py < th.y + 0.8 && py > th.y - 1 && Math.abs(px - th.x) < th.w / 2 + 0.2 && Math.abs(pz - th.z) < th.d / 2 + 0.2) this.hurt(player, th.x, th.z, 5);
+          break;
+        }
       }
       if (th.kind === 'elder') this._updateElder(th, dt);
     }
@@ -252,8 +321,40 @@ export class Game {
     th.cool = 1.5;
     const need = th.need || {}, T = this.totals;
     if ((need.elders || 0) > T.elders) { const m = need.elders - T.elders; this.toast(`Rescue ${m} more Elder${m > 1 ? 's' : ''} to open this`, 3); this.events.push({ type: 'locked' }); return; }
+    if (need.done && !(T.done || []).includes(need.done)) { this.toast('Defeat the guardian of this world first', 3); this.events.push({ type: 'locked' }); return; }
     if ((need.gems || 0) > T.gems) { this.toast(`Collect ${need.gems - T.gems} more gems to open this`, 3); this.events.push({ type: 'locked' }); return; }
     this.events.push({ type: 'portal', target: th.target });
+  }
+
+  _dropSunstone(th) {
+    const st = { kind: 'sunstone', id: th.sunId, x: th.x, y: th.y + 0.9, z: th.z, alive: true, r: 1.4, drops: [], bob: 0, vy: 7, mesh: Props.makeSunstone() };
+    st.mesh.position.set(st.x, st.y, st.z); this.group.add(st.mesh); this.things.push(st);
+    this.toast('The thief dropped a Sunstone!', 2.5);
+  }
+
+  _updateSunstone(th, dt, player, dist, dy, alive) {
+    if (th.vy !== undefined) {
+      th.vy -= 22 * dt; th.y += th.vy * dt;
+      const gy = this.gy(th.x, th.z, th.y + 0.5) + 1.0;
+      if (th.vy < 0 && th.y <= gy) { th.y = gy; th.vy = undefined; th.base = gy; }
+    } else { th.base = th.base === undefined ? th.y : th.base; th.y = th.base + Math.sin(this.time * 2.2 + th.bob) * 0.18; }
+    th.mesh.position.set(th.x, th.y, th.z); th.mesh.userData.spin(this.time);
+    if (alive && dist < th.r && Math.abs(dy) < 2.2) {
+      th.alive = false; th.mesh.visible = false;
+      this.state.sunstones++; this.sunFound.add(th.id);
+      this.events.push({ type: 'sunstone', x: th.x, y: th.y, z: th.z });
+      this.toast('Sunstone recovered!', 3);
+    }
+  }
+
+  _lightBrazier(th) {
+    th.lit = true; th.mesh.userData.flame.visible = true; th.mesh.userData.cold.visible = false;
+    this.events.push({ type: 'checkpoint' });
+    const mates = this.things.filter((t) => t.kind === 'brazier' && t.group === th.group);
+    if (mates.every((t) => t.lit)) {
+      for (const g of this.things) if (g.kind === 'gate' && g.group === th.group && !g.opening) { g.opening = true; }
+      this.toast('A gate rumbles open!', 2.5); this.events.push({ type: 'gate' });
+    } else this.toast(`${mates.filter((t) => t.lit).length} / ${mates.length} braziers lit`, 1.8);
   }
 
   _light(th) { th.lit = true; this.checkpoint = { x: th.x + Math.sin(th.ry) * 1.5, y: th.y, z: th.z + Math.cos(th.ry) * 1.5, yaw: th.ry }; this.events.push({ type: 'checkpoint' }); this.toast('Checkpoint lit!', 1.8); }
@@ -341,11 +442,17 @@ export class Game {
     } else {
       // walkers
       th.timer -= dt;
-      const chase = dp < 9 && Math.abs(th.y - player.y) < 3 && alive;
+      const isThief = kind === 'thief';
+      const chase = !isThief && dp < 9 && Math.abs(th.y - player.y) < 3 && alive;
+      const flee = isThief && dp < 12 && alive;
       if (chase) th.heading += angDiff(Math.atan2(dxp, dzp), th.heading) * Math.min(1, dt * 4);
+      else if (flee) th.heading += angDiff(Math.atan2(-dxp, -dzp), th.heading) * Math.min(1, dt * 6);
       else if (th.timer <= 0) { th.timer = rnd(1.5, 3.5); th.heading = Math.random() * TAU; }
-      if (!chase && Math.hypot(th.x - th.hx, th.z - th.hz) > th.patrol) th.heading = Math.atan2(th.hx - th.x, th.hz - th.z);
-      const sp = th.stun > 0 ? 0 : d.speed * (chase ? 1.25 : 0.7);
+      if (!chase && Math.hypot(th.x - th.hx, th.z - th.hz) > th.patrol) {
+        const home = Math.atan2(th.hx - th.x, th.hz - th.z);
+        if (flee) th.heading += angDiff(home, th.heading) * Math.min(1, dt * 2.5); else th.heading = home;
+      }
+      const sp = th.stun > 0 ? 0 : d.speed * (chase ? 1.25 : flee ? 1.1 : isThief ? 0.5 : 0.7);
       const nx = th.x + Math.sin(th.heading) * sp * dt, nz = th.z + Math.cos(th.heading) * sp * dt;
       const s = w.sample(nx, nz);
       if (s.h - th.y > 0.45 || s.ny < P.walkN) { th.heading += Math.PI * rnd(0.6, 1.2); th.timer = 1; }
@@ -361,7 +468,7 @@ export class Game {
     th.mesh.position.set(th.x, th.y, th.z);
 
     // contact damage
-    if (alive && dp < th.r + 0.42 && Math.abs(player.y - th.y) < 1.1 && !player.chargeT && kind !== 'spitter') this.hurt(player, th.x, th.z, 7);
+    if (alive && dp < th.r + 0.42 && Math.abs(player.y - th.y) < 1.1 && !player.chargeT && kind !== 'spitter' && kind !== 'thief') this.hurt(player, th.x, th.z, 7);
     // stomp bounce: nothing in this game (Cinder cannot stomp)
   }
 

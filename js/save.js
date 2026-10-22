@@ -26,11 +26,12 @@ export const Save = {
     this.recount(); this.flush();
   },
   recount() {
-    const t = { gems: 0, elders: 0, sunstones: 0 };
-    for (const r of Object.values(this.cur.levels)) { t.gems += r.gems || 0; t.elders += (r.elders || []).length; t.sunstones += (r.sunstones || []).length; }
+    const t = { gems: 0, elders: 0, sunstones: 0, done: [] };
+    for (const [id, r] of Object.entries(this.cur.levels)) {
+      if (r.done) t.done.push(id); t.gems += r.gems || 0; t.elders += (r.elders || []).length; t.sunstones += (r.sunstones || []).length; }
     this.cur.totals = t;
   },
-  totals() { return this.cur ? this.cur.totals : { gems: 0, elders: 0, sunstones: 0 }; },
+  totals() { return this.cur ? this.cur.totals : { gems: 0, elders: 0, sunstones: 0, done: [] }; },
   summarize(i) {
     const s = data.slots[i]; if (!s) return null;
     return { gems: s.totals.gems, elders: s.totals.elders, sunstones: s.totals.sunstones, playtime: s.playtime };
