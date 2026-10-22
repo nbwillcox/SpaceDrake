@@ -7,6 +7,8 @@ import { buildTerrainMesh, buildBoxMeshes } from './art/terrain.js';
 import { createDragon } from './art/dragon.js';
 import { Fx } from './art/fx.js';
 import testlab from './levels/testlab.js';
+import { Game } from './game.js';
+import { Hud } from './hud.js';
 
 const STEP = 1 / 120;
 const q = new URLSearchParams(location.search);
@@ -61,6 +63,8 @@ const fx = new Fx(scene); G.fx = fx;
 const shadow = new THREE.Mesh(new THREE.CircleGeometry(0.5, 20), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.35, depthWrite: false }));
 shadow.rotation.x = -Math.PI / 2; scene.add(shadow);
 
+const game = new Game({ scene, world, spec, settings: { cozy: true } }); G.game = game;
+const hud = new Hud(game);
 const cam = new FollowCam(camera); G.cam = cam;
 cam.snapTo(sp[3]);
 
@@ -79,17 +83,21 @@ function simStep(inp) {
   const mv = inp.my, mr = inp.mx;
   const move = { mx: fx_ * mv + rx * mr, mz: fz_ * mv + rz * mr,
     jumpPressed: pending.jumpPressed, jumpHeld: inp.jumpHeld,
-    flamePressed: pending.flamePressed, chargePressed: pending.chargePressed, frozen: inp.lookHeld };
+    flamePressed: pending.flamePressed, chargePressed: pending.chargePressed, frozen: inp.lookHeld || game.dying > 0 };
   pending.jumpPressed = pending.flamePressed = pending.chargePressed = false;
+  world.updateBoxes(STEP);
   const prevYaw = player.yaw;
   player.step(STEP, move);
   player.yawRate = Math.atan2(Math.sin(player.yaw - prevYaw), Math.cos(player.yaw - prevYaw)) / STEP;
   for (const e of player.events) onEvent(e);
+  game.update(STEP, player);
+  for (const e of game.events) onGameEvent(e);
+  game.events.length = 0;
   if (player.flameT > 0) {
     const nx = Math.sin(player.yaw), nz = Math.cos(player.yaw);
     fx.flame(player.x + nx * 0.8, player.y + 0.62, player.z + nz * 0.8, nx, nz);
   }
-  if (player.dead) { player.respawn(sp[0], world.sample(sp[0], sp[2]).h + 0.2, sp[2], sp[3]); cam.snapTo(sp[3]); }
+  if (game.respawned) { game.respawned = false; cam.snapTo(game.checkpoint.yaw); }
   t += STEP;
 }
 
@@ -100,6 +108,23 @@ function onEvent(e) {
     case 'charge': fx.dust(player.x, player.y, player.z, 8, 1.3); Input.rumble(0.3, 0.6, 120); break;
     case 'bump': fx.sparkle(player.x + Math.sin(player.yaw) * 0.6, player.y + 0.5, player.z + Math.cos(player.yaw) * 0.6, 12, 1, 0.9, 0.4); Input.rumble(0.8, 0.8, 160); break;
     case 'flame': Input.rumble(0.0, 0.4, 150); break;
+  }
+}
+
+function onGameEvent(e) {
+  switch (e.type) {
+    case 'gem': fx.sparkle(e.x, e.y, e.z, 4, ...(e.v >= 10 ? [1, 0.8, 0.3] : e.v >= 5 ? [0.4, 0.7, 1] : e.v >= 2 ? [0.4, 1, 0.55] : [1, 0.4, 0.5])); Input.rumble(0.05, 0.12, 40); break;
+    case 'break': fx.dust(e.x, e.y - 0.3, e.z, 10, 1.5); fx.sparkle(e.x, e.y, e.z, 6, 1, 0.7, 0.3); Input.rumble(0.3, 0.3, 70); break;
+    case 'kill': fx.sparkle(e.x, e.y, e.z, 14, 1, 0.55, 0.25); fx.dust(e.x, e.y - 0.4, e.z, 6, 1.2); Input.rumble(0.4, 0.5, 100); break;
+    case 'hurt': fx.sparkle(player.x, player.y + 0.6, player.z, 10, 1, 0.3, 0.3); Input.rumble(0.9, 0.9, 220); break;
+    case 'heal': fx.sparkle(player.x, player.y + 1.2, player.z, 12, 1, 0.9, 0.4); break;
+    case 'moth': fx.sparkle(e.x, e.y, e.z, 10, 0.5, 1, 1); break;
+    case 'rescue': fx.sparkle(e.x, e.y, e.z, 40, 0.5, 0.95, 1); fx.sparkle(e.x, e.y, e.z, 20, 1, 0.85, 0.4); Input.rumble(0.5, 0.8, 300); break;
+    case 'checkpoint': fx.sparkle(player.x, player.y + 1, player.z, 16, 1, 0.85, 0.4); break;
+    case 'zap': fx.sparkle(e.x, e.y, e.z, 5, 1, 0.4, 0.7); break;
+    case 'clink': fx.sparkle(e.x, e.y, e.z, 5, 0.9, 0.9, 1); break;
+    case 'hit': fx.sparkle(e.x, e.y, e.z, 8, 1, 0.8, 0.3); break;
+    case 'respawn': game.respawned = true; break;
   }
 }
 
@@ -140,9 +165,12 @@ function render(dt, alpha) {
   shadow.scale.setScalar(Math.max(0.35, 1 - hh * 0.06));
   shadow.material.opacity = Math.max(0.1, 0.38 - hh * 0.02);
 
+  for (const b of world.moving) b.mesh.position.set((b.min[0] + b.max[0]) / 2, (b.min[1] + b.max[1]) / 2, (b.min[2] + b.max[2]) / 2);
   const inp = G.inp || Input.state;
   cam.update(dt, { x: rx, y: ry, z: rz, yaw: ryaw, vx: player.vx, vz: player.vz, onGround: player.onGround }, inp, world);
   fx.update(dt);
+  game.render();
+  hud.update();
 
   const w = canvas.clientWidth, h = canvas.clientHeight;
   if (canvas.width !== Math.floor(w * renderer.getPixelRatio()) || canvas.height !== Math.floor(h * renderer.getPixelRatio())) {

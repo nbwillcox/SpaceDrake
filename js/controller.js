@@ -32,7 +32,7 @@ export class Player {
     this.onGround = false; this.sliding = false; this.gliding = false; this.jumping = false;
     this.coyote = 0; this.jumpBuf = 0;
     this.chargeT = 0; this.chargeCool = 0; this.chargeYaw = yaw; this.carryT = 0; this.bumpT = 0;
-    this.flameT = 0; this.flameCool = 0;
+    this.flameT = 0; this.flameCool = 0; this.flameId = 0; this.stunT = 0;
     this.slideNx = 0; this.slideNz = 0; this.groundBox = null;
     this.airTime = 0; this.dead = false;
   }
@@ -53,6 +53,8 @@ export class Player {
     this.flameT = Math.max(0, this.flameT - dt);
     this.carryT = Math.max(0, this.carryT - dt);
     this.bumpT = Math.max(0, this.bumpT - dt);
+    this.stunT = Math.max(0, this.stunT - dt);
+    if (this.stunT > 0) inp = Object.assign({}, inp, { frozen: true, jumpPressed: false });
     if (inp.jumpPressed) this.jumpBuf = P.buffer;
     if (this.onGround) this.coyote = P.coyote;
 
@@ -69,9 +71,13 @@ export class Player {
       this.events.push({ type: 'charge' });
     }
     if (inp.flamePressed && !inp.frozen && this.flameCool <= 0 && this.chargeT <= 0) {
-      this.flameT = P.flameTime; this.flameCool = P.flameCool;
+      this.flameT = P.flameTime; this.flameCool = P.flameCool; this.flameId++;
       this.events.push({ type: 'flame' });
     }
+
+    // ride a moving platform
+    const gb = this.groundBox;
+    if (gb && this.onGround && gb.move) { this.x += gb.dx; this.y += gb.dy; this.z += gb.dz; }
 
     // ---- horizontal velocity
     if (this.chargeT > 0) {
@@ -102,8 +108,8 @@ export class Player {
         rate = this.carryT > 0 ? 1.0 : P.airRate;
       }
       const k = 1 - Math.exp(-rate * dt);
-      this.vx += (tx - this.vx) * k; this.vz += (tz - this.vz) * k;
-      if (this.speedH > 0.6 && !this.sliding) {
+      if (this.stunT <= 0) { this.vx += (tx - this.vx) * k; this.vz += (tz - this.vz) * k; }
+      if (this.speedH > 0.6 && !this.sliding && this.stunT <= 0) {
         const want = Math.atan2(this.vx, this.vz);
         this.yaw = this.onGround ? want : this.yaw + angDiff(want, this.yaw) * (1 - Math.exp(-14 * dt));
       } else if (this.sliding) {
@@ -150,6 +156,12 @@ export class Player {
     const lim = P.radius;
     this.x = clamp(this.x, lim, w.size - lim); this.z = clamp(this.z, lim, w.size - lim);
     if (this.y < w.killY) { this.dead = true; this.events.push({ type: 'fall' }); }
+  }
+
+  // Knockback from a hit.
+  knock(vx, vz, vy = 5, stun = 0.3) {
+    this.vx = vx; this.vz = vz; this.vy = vy; this.onGround = false; this.sliding = false; this.gliding = false;
+    this.chargeT = 0; this.stunT = stun; this.groundBox = null; this.jumping = false;
   }
 
   _endCharge(bumped) {
@@ -201,7 +213,7 @@ export class Player {
     const was = this.onGround;
     let ny = oldY + this.vy * dt;
     const g = w.groundAt(this.x, this.z, oldY, P.stepUp, this._g);
-    const snap = was && this.vy <= 0 ? P.snapDown : 0;
+    const snap = (was || this.sliding) && this.vy <= 0 ? P.snapDown : 0;
 
     if (this.vy > 0) {
       const c = w.ceilingAt(this.x, this.z, P.radius, oldY + P.height - 0.01, ny + P.height);

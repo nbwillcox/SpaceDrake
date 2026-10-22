@@ -13,8 +13,26 @@ export class World {
     this.boxes = spec.boxes || [];
     this.killY = spec.killY === undefined ? -25 : spec.killY;
     this._s = { h: 0, nx: 0, ny: 1, nz: 0, gx: 0, gz: 0 };
+    this.time = 0;
     for (const b of this.boxes) {
-      b.vx = b.vx || 0; b.vy = b.vy || 0; b.vz = b.vz || 0;
+      b.dx = 0; b.dy = 0; b.dz = 0;
+      if (b.move) { b.min0 = b.min.slice(); b.max0 = b.max.slice(); b.off = [0, 0, 0]; }
+    }
+    this.moving = this.boxes.filter((b) => b.move);
+    this.updateBoxes(0);
+  }
+
+  // Advance moving boxes. b.move = { amp:[x,y,z], period (s), phase (0..1) }. Stores per-step deltas.
+  updateBoxes(dt) {
+    this.time += dt;
+    for (const b of this.moving) {
+      const m = b.move, a = Math.sin((this.time / m.period + (m.phase || 0)) * Math.PI * 2);
+      for (let k = 0; k < 3; k++) {
+        const o = m.amp[k] * a, d = o - b.off[k];
+        b.off[k] = o;
+        b.min[k] = b.min0[k] + o; b.max[k] = b.max0[k] + o;
+        if (k === 0) b.dx = d; else if (k === 1) b.dy = d; else b.dz = d;
+      }
     }
   }
 

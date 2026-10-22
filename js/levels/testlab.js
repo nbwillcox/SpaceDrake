@@ -4,6 +4,8 @@ const vn = (x, z) => { const h = (a, b) => { let v = (a * 374761393 + b * 668265
   const xi = Math.floor(x), zi = Math.floor(z), u = sm(0, 1, x - xi), v = sm(0, 1, z - zi);
   return (h(xi, zi) * (1 - u) + h(xi + 1, zi) * u) * (1 - v) + (h(xi, zi + 1) * (1 - u) + h(xi + 1, zi + 1) * u) * v; };
 
+import { gem, gemLine, gemRing, gemPile, crate, vase, chest, enemy, moth, lantern, elder } from './helpers.js';
+
 export default {
   id: 'testlab', name: 'Test Lab',
   n: 128, cs: 1,
@@ -29,6 +31,14 @@ export default {
     h += (1 - sm(0, 8, edge)) * 8;
     return h;
   },
+  entities: [
+    ...gemRing(64, 82, 5, 12, 1), ...gemLine(48, 96, 80, 96, 12, 2), ...gemPile(64, 76, 5),
+    crate(58, 84, [1, 1, 2]), crate(60, 84, [2, 2]), vase(70, 84, [1, 1]), chest(72, 78, [5, 5, 10, 10], Math.PI),
+    enemy('stroller', 40, 60, 6), enemy('shield', 36, 70, 4), enemy('spiked', 50, 80, 4), enemy('hopper', 76, 88, 5), enemy('spitter', 88, 82), enemy('brute', 90, 66, 4),
+    moth(66, 92), moth(60, 100),
+    lantern(64, 96), elder(56, 100, 'You can glide off high places. Hold jump in the air!'),
+    ...gemLine(33, 107, 33, 107, 1, 10, 6), ...gemRing(100, 100, 6, 8, 5, 3),
+  ],
   boxes: (() => {
     const b = [];
     const box = (x, y, z, w, h, d, color) => b.push({ min: [x, y, z], max: [x + w, y + h, z + d], color: color || 0x9aa3ff });
@@ -42,6 +52,9 @@ export default {
     // walls to bump into
     box(70, 0, 40, 10, 8, 2, 0xff9fb4);
     box(84, 0, 40, 2, 3, 12, 0xffd27a);
+    // moving platforms: horizontal shuttle, vertical lift
+    b.push({ min: [60, 0, 120], max: [64, 3.4, 124], color: 0xffb35c, move: { amp: [10, 0, 0], period: 8 } });
+    b.push({ min: [74, 0, 116], max: [78, 2.6, 120], color: 0xff6fb0, move: { amp: [0, 3, 0], period: 6 } });
     // tall tower to test glide
     box(100, 0, 100, 6, 24, 6, 0xb8f08a);
     // low ceiling tunnel

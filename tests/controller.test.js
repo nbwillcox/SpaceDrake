@@ -45,12 +45,14 @@ function run(p, secs, f) {
 {
   const w = mk((x) => (x < 32 ? 3 : 0));
   const p = new Player(w, 30, 3, 32); run(p, 0.2, () => ({}));
-  let jumped = false;
+  let jumped = false, didJump = false;
   run(p, 1.2, (t, i) => {
-    const off = p.x > 32.2;
-    return { mx: 1, jumpPressed: off && !jumped && p.airTime > 0.04 && (jumped = true), jumpHeld: true };
+    if (p.events.some((e) => e.type === 'jump')) didJump = true;
+    const off = p.airTime > 0.05 && p.airTime < 0.11 && !jumped;
+    if (off) jumped = true;
+    return { mx: 1, jumpPressed: off, jumpHeld: true };
   });
-  ok(jumped && p.events.length >= 0, 'coyote jump attempted after leaving ledge');
+  ok(jumped && didJump, 'jump allowed shortly after leaving a ledge (coyote)');
 }
 
 // --- glide extends distance
@@ -134,6 +136,16 @@ function run(p, secs, f) {
   const p = new Player(w, 32, -30, 32);
   let fell = false; run(p, 1, () => { if (p.events.some((e) => e.type === 'fall')) fell = true; return {}; });
   ok(p.dead || fell, 'kill plane triggers fall');
+}
+
+// --- moving platform carries the rider
+{
+  const b = { min: [30, 1, 30], max: [34, 2, 34], move: { amp: [6, 0, 0], period: 8 } };
+  const w = mk(() => 0, [b]);
+  const p = new Player(w, 32, 2, 32); 
+  let maxOff = 0, stayed = true;
+  for (let i = 0; i < 120 * 6; i++) { w.updateBoxes(DT); p.step(DT, NONE); maxOff = Math.max(maxOff, Math.abs(p.x - 32)); if (!p.onGround && i > 10) stayed = false; }
+  ok(maxOff > 3 && stayed, `rider carried by platform (max offset ${maxOff.toFixed(1)} m)`);
 }
 
 // --- raycast
