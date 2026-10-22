@@ -8,9 +8,9 @@ import { Player } from '../js/controller.js';
 import { Bot } from '../js/bot.js';
 
 const DT = 1 / 120;
-const ids = process.argv.slice(2).length ? process.argv.slice(2) : Object.keys(LEVELS);
-let bad = 0;
-const fail = (id, msg) => { bad++; console.log(`  FAIL ${msg}`); };
+let bad = 0, QUIET = false;
+const out = (...a) => { if (!QUIET) console.log(...a); };
+const fail = (id, msg) => { bad++; out(`  FAIL ${msg}`); };
 
 function applyVents(world, spec, p) {
   for (const e of spec.entities) {
@@ -106,10 +106,11 @@ function runBot(world, p, targets, mode, maxT, from, A, B) {
   return { ok: false, why: 'timeout', t, x: p.x, z: p.z };
 }
 
-for (const id of ids) {
-  console.log(`\n== ${id}`);
-  if (LEVELS[id].kind === 'flight' || LEVELS[id].kind === 'boss') { console.log(`  ${LEVELS[id].kind} level: no node graph, checked in the browser`); continue; }
-  const spec = buildSpec(LEVELS[id]);
+export function validateDef(id, def, quiet) {
+  QUIET = !!quiet; bad = 0;
+  out(`\n== ${id}`);
+  if (def.kind === 'flight' || def.kind === 'boss') { out(`  ${def.kind} level: no node graph, checked in the browser`); return 0; }
+  const spec = buildSpec(def);
   const world = makeWorld(spec);
   // slopes
   for (const s of spec.segs) if (s.type !== 'gap' && s.type !== 'bridge' && s.slope > LIMITS.rampSlope) fail(id, `ramp ${s.L.a}->${s.L.b} slope ${s.slope.toFixed(2)} > ${LIMITS.rampSlope}`);
@@ -119,29 +120,29 @@ for (const id of ids) {
   for (const nd of Object.values(spec.nodes)) if (!cell(nd.x, nd.z)) fail(id, `node ${nd.id} not reachable`);
   let unreachable = 0;
   for (const e of spec.entities) if (e.x !== undefined && e.y === undefined && !cell(e.x, e.z)) { unreachable++; if (['elder', 'chest', 'lantern', 'exit', 'portal', 'sunstone'].includes(e.t)) fail(id, `${e.t} at ${e.x.toFixed(0)},${e.z.toFixed(0)} unreachable`); }
-  if (unreachable) console.log(`  note: ${unreachable} placed entities on unreachable cells`);
+  if (unreachable) out(`  note: ${unreachable} placed entities on unreachable cells`);
   // dynamic: every virtual link, both directions unless one-way
   for (const l of spec.links) {
     if (l.type !== 'gap' && l.type !== 'bridge' && l.type !== 'ferry') continue;
     const dirs = l.oneWay ? [[l.a, l.b]] : [[l.a, l.b], [l.b, l.a]];
     for (const [a, b] of dirs) {
-      if (l.type === 'ferry') { console.log(`  ferry ${a}->${b}: assumed ok (moving platform; check by hand)`); continue; }
+      if (l.type === 'ferry') { out(`  ferry ${a}->${b}: assumed ok (moving platform; check by hand)`); continue; }
       if (l.spring && a === l.a) {
         const r = springHop(world, spec, a, b, l);
-        console.log(`  spring ${a}->${b}: ${r.ok ? 'ok (' + r.t.toFixed(1) + 's)' : 'FAILED ' + r.why + ' at ' + (r.x || 0).toFixed(1) + ',' + (r.z || 0).toFixed(1)}`);
+        out(`  spring ${a}->${b}: ${r.ok ? 'ok (' + r.t.toFixed(1) + 's)' : 'FAILED ' + r.why + ' at ' + (r.x || 0).toFixed(1) + ',' + (r.z || 0).toFixed(1)}`);
         if (!r.ok) bad++;
         continue;
       }
       if (l.vent && a === l.a) {
         const r = ventHop(world, spec, a, b, l);
-        console.log(`  vent ${a}->${b}: ${r.ok ? 'ok (' + r.t.toFixed(1) + 's)' : 'FAILED ' + r.why + ' at ' + (r.x || 0).toFixed(1) + ',' + (r.z || 0).toFixed(1)}`);
+        out(`  vent ${a}->${b}: ${r.ok ? 'ok (' + r.t.toFixed(1) + 's)' : 'FAILED ' + r.why + ' at ' + (r.x || 0).toFixed(1) + ',' + (r.z || 0).toFixed(1)}`);
         if (!r.ok) bad++;
         continue;
       }
       let r = hop(world, spec, a, b, l, l.type === 'bridge' ? 'walk' : 'gap');
       let how = l.type === 'bridge' ? 'walk' : 'jump+glide';
       if (!r.ok && l.type === 'gap') { r = hop(world, spec, a, b, l, 'charge'); how = 'jump+charge+glide'; }
-      console.log(`  ${l.type} ${a}->${b}: ${r.ok ? 'ok (' + how + ', ' + r.t.toFixed(1) + 's)' : 'FAILED ' + r.why + ' at ' + (r.x || 0).toFixed(1) + ',' + (r.z || 0).toFixed(1)}`);
+      out(`  ${l.type} ${a}->${b}: ${r.ok ? 'ok (' + how + ', ' + r.t.toFixed(1) + 's)' : 'FAILED ' + r.why + ' at ' + (r.x || 0).toFixed(1) + ',' + (r.z || 0).toFixed(1)}`);
       if (!r.ok) bad++;
     }
   }
@@ -168,9 +169,16 @@ for (const id of ids) {
       total += r.t || 0;
       if (!r.ok) { fail(id, `route hop ${A.id}->${B.id} ${r.why} at ${(r.x || 0).toFixed(1)},${(r.z || 0).toFixed(1)}`); ok = false; break; }
     }
-    if (ok) console.log(`  route spawn -> exit: ok in ${total.toFixed(0)}s of play (${path.length} hops)`);
+    if (ok) out(`  route spawn -> exit: ok in ${total.toFixed(0)}s of play (${path.length} hops)`);
   }
-  console.log(`  entities: ${spec.entities.length}, decor: ${spec.decor.length}, boxes: ${spec.boxes.length}`);
+  out(`  entities: ${spec.entities.length}, decor: ${spec.decor.length}, boxes: ${spec.boxes.length}`);
+  return bad;
 }
-console.log(bad ? `\n${bad} problem(s)` : '\nall levels valid');
-process.exit(bad ? 1 : 0);
+
+if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '/').split('/').pop())) {
+  const ids = process.argv.slice(2).length ? process.argv.slice(2) : Object.keys(LEVELS);
+  let total = 0;
+  for (const id of ids) total += validateDef(id, LEVELS[id]);
+  console.log(total ? `\n${total} problem(s)` : '\nall levels valid');
+  process.exit(total ? 1 : 0);
+}

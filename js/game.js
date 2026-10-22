@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { P } from './controller.js';
 import * as Props from './art/props.js';
 import { GolemBoss } from './boss_golem.js';
+import { Boss, BOSSES } from './boss.js';
 
 const TAU = Math.PI * 2;
 const rnd = (a, b) => a + Math.random() * (b - a);
@@ -17,7 +18,7 @@ const ENEMY = {
   brute: { speed: 1.6, hp: 4, r: 0.95, drop: [5, 5, 10, 10] },
   thief: { speed: 5.2, hp: 1, r: 0.45, drop: [5] },
 };
-function needText(n) { return n.elders ? `${n.elders} Elders` : n.gems ? `${n.gems} gems` : n.done ? 'Defeat the guardian' : ''; }
+function needText(n, cozy) { return n.elders ? `${cozy ? Math.ceil(n.elders * 0.75) : n.elders} Elders` : n.gems ? `${n.gems} gems` : n.done ? 'Defeat the guardian' : ''; }
 export const WICK_COLORS = [0x000000, 0xcfe9ff, 0xff9a3c, 0xffd860];
 
 export class Game {
@@ -72,6 +73,8 @@ export class Game {
     const w = this.world;
     if (e.t === 'thief') e = Object.assign({}, e, { t: 'enemy', kind: 'thief' });
     if (e.t === 'golem') { this.things.push(new GolemBoss(this, e)); return; }
+    if (e.t === 'boss') { this.things.push(new Boss(this, e, BOSSES[e.boss])); return; }
+    if (e.t === 'ending') { this.events.push({ type: 'ending' }); this.finished = true; return; }
     if (e.t === 'gem') { const y = e.y !== undefined ? e.y : this.gy(e.x, e.z) + 0.65; this._newGem(e.x, y, e.z, e.v || 1, 1); return; }
     const y = e.y !== undefined ? e.y : this.gy(e.x, e.z);
     const th = { kind: e.t, x: e.x, y, z: e.z, alive: true, r: 0.6, ry: e.yaw || 0, drops: [] };
@@ -113,6 +116,7 @@ export class Game {
         th.box = this.world.addBox({ min: [e.x - th.w / 2, y - 0.5, e.z - th.d / 2], max: [e.x + th.w / 2, y + th.hh, e.z + th.d / 2] });
         break;
       }
+      case 'gust': th.r = e.r || 6; th.h = e.h || 14; th.dx = e.dx === undefined ? 1 : e.dx; th.dz = e.dz || 0; th.force = e.force || 26; th.mesh = Props.makeGust(th.r, th.h, th.dx, th.dz); break;
       case 'spikes': { th.w = e.w || 3; th.d = e.d || 3; th.r = Math.max(th.w, th.d) / 2; th.mesh = Props.makeSpikes(th.w, th.d); th.spk = 0;
         break;
 
@@ -120,7 +124,7 @@ export class Game {
       case 'moth': th.mesh = Props.makeMoth(); th.r = 0.6; th.y = y + (e.h || 1.6); th.hx = e.x; th.hz = e.z; th.hy = th.y; th.hit = 'flame'; break;
       case 'lantern': th.mesh = Props.makeLantern(); th.r = 1.3; th.lit = false; break;
       case 'exit': th.mesh = Props.makePortal(0x7ff0ff, 'Level exit'); th.r = 1.8; break;
-      case 'portal': th.mesh = Props.makePortal(e.color || 0xffc86b, e.label || 'Portal', e.need ? needText(e.need) : ''); th.r = 1.8; th.target = e.target; th.need = e.need; th.label = e.label; th.cool = 0; break;
+      case 'portal': th.mesh = Props.makePortal(e.color || 0xffc86b, e.label || 'Portal', e.need ? needText(e.need, this.settings.cozy) : ''); th.r = 1.8; th.target = e.target; th.need = e.need; th.label = e.label; th.cool = 0; break;
       case 'elder': th.mesh = Props.makeElder(); th.r = 1.7; th.tip = e.tip || 'Thank you, little one!'; th.freed = false; th.idx = this.elderCount++;
         if (e.afterBoss) { th.pendingBoss = true; th.mesh.visible = false; } this.state.eldersTotal++;
         if (this.eldersFound.has(th.idx)) { th.alive = false; th.freed = true; th.t = Math.random() * 6; th.mesh.userData.crystal.visible = false; th.mesh.userData.free.visible = true; this.state.elders++; }
@@ -147,6 +151,14 @@ export class Game {
   splash(player) {
     if (this.dying > 0) return;
     this.dying = 0.9; this.noLife = true; this.events.push({ type: 'fall' });
+  }
+
+  // Lava burns one heart, then returns Cinder to the last safe spot. No hearts left: a real death.
+  lavaHit(player) {
+    if (this.dying > 0) return;
+    this.events.push({ type: 'hurt' });
+    if (this.state.hp > 0) { this.state.hp--; this.dying = 0.9; this.noLife = true; this.events.push({ type: 'fall' }); }
+    else this.die(player);
   }
 
   die(player) {
@@ -211,7 +223,7 @@ export class Game {
     }
     if (this.world.liquid && this.dying <= 0 && player.y < liqY - 0.15) {
       this.events.push({ type: 'splash', x: player.x, y: liqY, z: player.z, kind: this.world.liquid.kind });
-      this.splash(player);
+      if (this.world.liquid.kind === 'lava') this.lavaHit(player); else this.splash(player);
     }
 
     const px = player.x, py = player.y, pz = player.z;
@@ -302,6 +314,11 @@ export class Game {
           }
           break;
         }
+        case 'gust': {
+          th.mesh.userData.spin(this.time);
+          if (alive && !player.onGround && dist < th.r && py > th.y - 1 && py < th.y + th.h) { player.vx += th.dx * th.force * dt; player.vz += th.dz * th.force * dt; player.carryT = Math.max(player.carryT, 0.25); }
+          break;
+        }
         case 'spikes': {
           if (alive && py < th.y + 0.8 && py > th.y - 1 && Math.abs(px - th.x) < th.w / 2 + 0.2 && Math.abs(pz - th.z) < th.d / 2 + 0.2) this.hurt(player, th.x, th.z, 5);
           break;
@@ -335,7 +352,8 @@ export class Game {
     if (!alive || dist > th.r || Math.abs(dy) > 2.5 || th.cool > 0) return;
     th.cool = 1.5;
     const need = th.need || {}, T = this.totals;
-    if ((need.elders || 0) > T.elders) { const m = need.elders - T.elders; this.toast(`Rescue ${m} more Elder${m > 1 ? 's' : ''} to open this`, 3); this.events.push({ type: 'locked' }); return; }
+    const needE = need.elders ? Math.ceil(need.elders * (this.settings.cozy ? 0.75 : 1)) : 0;
+    if (needE > T.elders) { const m = needE - T.elders; this.toast(`Rescue ${m} more Elder${m > 1 ? 's' : ''} to open this`, 3); this.events.push({ type: 'locked' }); return; }
     if (need.done && !(T.done || []).includes(need.done)) { this.toast('Defeat the guardian of this world first', 3); this.events.push({ type: 'locked' }); return; }
     if ((need.gems || 0) > T.gems) { this.toast(`Collect ${need.gems - T.gems} more gems to open this`, 3); this.events.push({ type: 'locked' }); return; }
     this.events.push({ type: 'portal', target: th.target });

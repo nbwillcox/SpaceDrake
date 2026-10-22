@@ -59,6 +59,33 @@ const App = window.SD = {
   beginSlot() { App.goto((Save.cur && Save.cur.hub) || 'm_hub'); },
   continueGame() { Save.start(Save.lastSlot()); App.beginSlot(); },
 
+  // Finale: story beats, then credits with your totals, then back to the title.
+  onEnding(session) {
+    session.commit(true);
+    if (Save.cur) { Save.cur.completed = true; Save.flush(); }
+    Snd.music('victory');
+    const T = Save.totals();
+    const pages = [
+      `<h1>Warlord Gloam falls!</h1><p class="sub">The crystal Elders wake, one by one, and the stolen treasure rains back over the realm.</p><p class="hint">Press A / Enter</p>`,
+      `<h1>Thank you, Cinder!</h1><p class="sub">Wick glows brighter than ever. The six realms are safe again.</p><p class="hint">Press A / Enter</p>`,
+    ];
+    let i = 0;
+    const show = () => {
+      if (i < pages.length) { const n = UI.el('div'); n.innerHTML = pages[i++]; UI.custom(n, null, show); return; }
+      const n = UI.el('div');
+      n.innerHTML = `<div class="credits"><div class="roll">
+        <h1 class="logo">SPACEDRAKE</h1>
+        <p>A dragon adventure</p><p>&nbsp;</p>
+        <h2>You collected</h2><p>${T.gems} gems</p><p>${T.elders} Elders rescued</p><p>${T.sunstones} Sunstones</p><p>&nbsp;</p>
+        <h2>Starring</h2><p>Cinder, the little dragon</p><p>Wick, the firefly</p><p>&nbsp;</p>
+        <h2>Made with</h2><p>Three.js (MIT licence)</p><p>Every model, level, sound and tune<br>generated in code, live in your browser</p><p>&nbsp;</p>
+        <h2>Made for MJ</h2><p>&nbsp;</p><p>Thanks for playing!</p>
+      </div></div><p class="hint">Press A / Enter to return to the title</p>`;
+      UI.custom(n, null, () => { UI.close(); App.title(false); });
+    };
+    show();
+  },
+
   onGameOver(session) {
     Menus.gameOver(session, () => { UI.close(); App.goto(session.id); }, () => { UI.close(); const hub = App.hubFor(session.spec); App.goto(hub && LEVELS[hub] ? hub : session.id, { fromLevel: session.id }); });
   },

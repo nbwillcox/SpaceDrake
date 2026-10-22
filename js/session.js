@@ -168,6 +168,7 @@ export class Session {
       case 'respawn': this.cam.snapTo(game.checkpoint.yaw); break;
       case 'exit': this.finished = true; this.app.onExit(this); break;
       case 'gameover': this.app.onGameOver(this); break;
+      case 'ending': this.finished = true; this.app.onEnding(this); break;
       case 'portal': this.app.onPortal(this, e.target); break;
     }
     this.app.sfx && this.app.sfx(e.type, e, this);

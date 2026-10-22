@@ -86,3 +86,9 @@ html, body { margin: 0; height: 100%; background: #0b1020; overflow: hidden; fon
 .help b { color: #ffe27a; } .help span { opacity: .85; }
 
 body.ui-on #hint { display: none; }
+
+.credits { height: min(52vh, 420px); overflow: hidden; position: relative; mask-image: linear-gradient(transparent, #000 12%, #000 88%, transparent); }
+.credits .roll { animation: roll 38s linear forwards; padding-top: 40vh; }
+.credits h2 { color: #ffe27a; margin: 10px 0 4px; font-size: clamp(20px, 2.6vw, 30px); }
+.credits p { margin: 2px 0; font-size: clamp(16px, 2vw, 24px); }
+@keyframes roll { from { transform: translateY(0); } to { transform: translateY(-120%); } }

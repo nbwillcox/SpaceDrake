@@ -304,3 +304,16 @@ export function makeFlightRock(r) {
   g.add(mesh(new THREE.ConeGeometry(r * 0.45, r * 1.6, 5), M(0xaab0c4), 0, r * 1.1, 0));
   return g;
 }
+
+export function makeGust(r, h, dx, dz) {
+  const g = new THREE.Group();
+  const lines = [];
+  const mat = new THREE.MeshBasicMaterial({ color: 0xdff6ff, transparent: true, opacity: 0.5, depthWrite: false, side: THREE.DoubleSide });
+  for (let i = 0; i < 14; i++) {
+    const l = mesh(new THREE.PlaneGeometry(2.6, 0.08), mat.clone());
+    l.rotation.y = Math.atan2(dx, dz) + Math.PI / 2;
+    g.add(l); lines.push({ m: l, a: Math.random() * 6.28, rr: Math.random() * r * 0.9, y: Math.random() * h, s: 0.5 + Math.random() });
+  }
+  g.userData.spin = (t) => { for (const l of lines) { const f = ((t * l.s * 0.35 + l.a) % 1); l.m.position.set(Math.cos(l.a * 7) * l.rr + dx * (f - 0.5) * r * 2, l.y, Math.sin(l.a * 7) * l.rr + dz * (f - 0.5) * r * 2); l.m.material.opacity = 0.5 * Math.sin(f * Math.PI); } };
+  return g;
+}
