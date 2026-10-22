@@ -152,7 +152,7 @@ export class Game {
   die(player) {
     if (this.dying > 0) return;
     this.dying = 1.3; this.state.deaths++; this.events.push({ type: 'death' });
-    if (isFinite(this.state.lives)) this.state.lives--;
+    if (isFinite(this.state.lives)) { this.state.lives--; if (this.state.lives < 0) this.gameOver = true; }
   }
 
   heal() { if (this.state.hp < this.hpMax) { this.state.hp++; this.events.push({ type: 'heal' }); } }
@@ -183,7 +183,8 @@ export class Game {
     if (player.dead && this.dying <= 0) { this.splash(player); player.dead = false; }
     if (this.dying > 0) {
       this.dying -= dt;
-      if (this.dying <= 0) {
+      if (this.dying <= 0 && this.gameOver) { if (!this._goSent) { this._goSent = true; this.events.push({ type: 'gameover' }); } this.dying = 0.0001; }
+      else if (this.dying <= 0) {
         const c = this.noLife ? this.safe : this.checkpoint;
         player.respawn(c.x, c.y, c.z, c.yaw); player.dead = false;
         if (!this.noLife) S.hp = Math.max(S.hp, 1);

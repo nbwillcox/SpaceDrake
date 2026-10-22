@@ -6,6 +6,13 @@ const KEY = {
   confirm: ['Enter'], menuUp: ['ArrowUp'], menuDown: ['ArrowDown'], menuLeft: ['ArrowLeft'], menuRight: ['ArrowRight'],
 };
 
+export const KEYMAP = KEY;
+export const KEY_DEFAULTS = JSON.parse(JSON.stringify(KEY));
+export const ACTION_LABELS = {
+  up: 'Move forward', down: 'Move back', left: 'Move left', right: 'Move right', jump: 'Jump / glide', flame: 'Flame', charge: 'Charge',
+  look: 'Look around', recenter: 'Re-centre camera', pause: 'Pause', camL: 'Camera left', camR: 'Camera right', camU: 'Camera up', camD: 'Camera down',
+};
+
 const held = new Set();
 let mdx = 0, mdy = 0;
 const mouse = { 0: false, 2: false };
@@ -128,8 +135,9 @@ export const Input = {
     return s;
   },
 
+  rumbleOn: true,
   rumble(strong = 0.5, weak = 0.5, ms = 120) {
-    if (!rumbleOK || state.padIndex < 0) return;
+    if (!rumbleOK || !Input.rumbleOn || state.padIndex < 0) return;
     const p = navigator.getGamepads()[state.padIndex];
     const a = p && p.vibrationActuator;
     if (!a || !a.playEffect) return;

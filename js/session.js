@@ -73,6 +73,7 @@ export class Session {
     this.shadow = new THREE.Mesh(new THREE.CircleGeometry(0.5, 20), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.35, depthWrite: false }));
     this.shadow.rotation.x = -Math.PI / 2; scene.add(this.shadow);
     this.cam = new FollowCam(this.app.camera); this.cam.snapTo(sp[3]);
+    if (spec.kind === 'hub' && Save.cur) Save.cur.hub = this.id;
     this._gg = {};
   }
 
@@ -107,11 +108,18 @@ export class Session {
 
   simStep(inp) {
     const { cam, player, game, world, pending } = this;
+    let held = inp.jumpHeld;
+    if (Save.settings.glideToggle) {
+      this.latchT = Math.max(0, (this.latchT || 0) - STEP);
+      if (this.latch && (player.onGround || (pending.jumpPressed && this.latchT <= 0))) this.latch = false;
+      else if (!this.latch && player.gliding) { this.latch = true; this.latchT = 0.3; }
+      held = held || this.latch;
+    }
     const yaw = cam.fp ? 0 : cam.yaw;
     const fx_ = Math.sin(yaw), fz_ = Math.cos(yaw), rx = -Math.cos(yaw), rz = Math.sin(yaw);
     const move = {
       mx: fx_ * inp.my + rx * inp.mx, mz: fz_ * inp.my + rz * inp.mx,
-      jumpPressed: pending.jumpPressed, jumpHeld: inp.jumpHeld,
+      jumpPressed: pending.jumpPressed, jumpHeld: held,
       flamePressed: pending.flamePressed, chargePressed: pending.chargePressed, frozen: inp.lookHeld || game.dying > 0 || this.finished,
     };
     pending.jumpPressed = pending.flamePressed = pending.chargePressed = false;
@@ -159,6 +167,7 @@ export class Session {
       case 'splash': fx.dust(e.x, e.y, e.z, 14, 2); fx.sparkle(e.x, e.y + 0.3, e.z, 10, 0.5, 0.8, 1); break;
       case 'respawn': this.cam.snapTo(game.checkpoint.yaw); break;
       case 'exit': this.finished = true; this.app.onExit(this); break;
+      case 'gameover': this.app.onGameOver(this); break;
       case 'portal': this.app.onPortal(this, e.target); break;
     }
     this.app.sfx && this.app.sfx(e.type, e, this);

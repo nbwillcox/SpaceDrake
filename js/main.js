@@ -6,6 +6,8 @@ import { LEVELS, START_LEVEL, HUBS } from './levels/index.js';
 import { Hud } from './hud.js';
 import { UI } from './ui.js';
 import { Save } from './save.js';
+import { Audio as Snd } from './audio.js';
+import { installMenus, applySettings } from './menus.js';
 
 const q = new URLSearchParams(location.search);
 const canvas = document.getElementById('c');
@@ -21,7 +23,7 @@ let showDbg = q.has('dbg');
 const App = window.SD = {
   THREE, renderer, camera, hud, UI, Save, Input,
   session: null, paused: false, camLocked: false, busy: false,
-  sfx: null, levels: LEVELS,
+  sfx: (t, e) => Snd.event(t, e), levels: LEVELS,
 
   make(id, opts) { return LEVELS[id].kind === 'flight' ? new FlightSession(App, id) : new Session(App, id, opts); },
 
@@ -34,11 +36,31 @@ const App = window.SD = {
       App.session = App.make(id, opts);
       hud.bind(App.session.game);
       hud.setMode(App.session.spec.kind);
+      document.getElementById('hud').style.display = '';
+      Snd.music(App.session.def.music || 'meadow');
       App.paused = false;
       const s = App.session.spec;
       hud.banner(s.name, App.worldName(s), 2800);
     });
     App.busy = false;
+  },
+
+  title(initial) {
+    UI.close(); App.paused = false;
+    if (App.session) { App.session.dispose(); App.session = null; }
+    App.session = App.make('m_hub');
+    App.session.attract = true;
+    hud.bind(App.session.game);
+    document.getElementById('hud').style.display = 'none';
+    Snd.music('title');
+    if (initial) Menus.splash(); else Menus.title();
+  },
+
+  beginSlot() { App.goto((Save.cur && Save.cur.hub) || 'm_hub'); },
+  continueGame() { Save.start(Save.lastSlot()); App.beginSlot(); },
+
+  onGameOver(session) {
+    Menus.gameOver(session, () => { UI.close(); App.goto(session.id); }, () => { UI.close(); const hub = App.hubFor(session.spec); App.goto(hub && LEVELS[hub] ? hub : session.id, { fromLevel: session.id }); });
   },
 
   worldName(spec) { return ({ mossgate: 'Mossgate Meadows', brightforge: 'Brightforge Vale', mistral: 'Mistral Heights', glimmerdeep: 'Glimmerdeep', duskmarket: 'Duskmarket', keep: "Gloam's Keep" })[spec.world] || ''; },
@@ -95,6 +117,9 @@ const App = window.SD = {
       { label: 'Restart level', action: () => { UI.close(); App.paused = false; App.goto(s.id); } },
     ];
     if (hub && hub !== s.id) items.push({ label: 'Leave level', sub: 'Gems and Elders you found are kept', action: () => { s.commit(false); UI.close(); App.paused = false; App.goto(hub, { fromLevel: s.id }); } });
+    items.push({ label: 'Settings', action: () => Menus.settings(() => App.pause()) });
+    items.push({ label: 'How to play', action: () => Menus.help(() => App.pause()) });
+    items.push({ label: 'Quit to title', action: () => { s.commit(false); Save.flush(); App.title(false); } });
     UI.menu({ title: 'Paused', subtitle: s.spec.name, items, onBack: () => App.resume() });
   },
   resume() { UI.close(); App.paused = false; },
@@ -107,10 +132,12 @@ function frame(now) {
   const dt = Math.min(0.1, (now - last) / 1000); last = now;
   const inp = Input.poll();
   const s = App.session;
+  if (inp.usingPad && inp.buttons.some((b) => b)) Snd.unlock();
+  if (s && s.attract) { const t = now / 1000; s.freeCam = { pos: [100 + Math.cos(t * 0.12) * 58, 20 + Math.sin(t * 0.07) * 4, 100 + Math.sin(t * 0.12) * 58], look: [100, 5, 100] }; }
   if (UI.active()) UI.update(inp);
   else if (s && !App.busy && inp.pausePressed) App.pause();
   if (s) {
-    if (!App.paused && !UI.active() && !App.busy) s.advance(dt, inp);
+    if (!App.paused && !UI.active() && !App.busy && !s.attract) s.advance(dt, inp);
     else s.acc = 0;
     s.render(dt, s.acc / STEP);
     hud.update();
@@ -148,17 +175,26 @@ App.step = (n = 1, inp = {}) => {
 };
 
 // ---------- boot
+const Menus = installMenus(App);
+App.Menus = Menus; App.Snd = Snd;
 function boot() {
-  const used = Save.slots().findIndex((x) => x);
-  Save.start(used >= 0 ? used : 0);
-  const id = q.get('level') || START_LEVEL;
-  UI.cover(true);
-  App.session = App.make(id);
-  hud.bind(App.session.game);
-  hud.setMode(App.session.spec.kind);
-  hud.banner(App.session.spec.name, App.worldName(App.session.spec));
+  applySettings();
+  for (const ev of ['keydown', 'mousedown', 'pointerdown', 'touchstart']) addEventListener(ev, () => Snd.unlock(), { passive: true });
+  Input.onUnlock = () => { if (App.session && !App.paused && !UI.active() && !App.busy && !App.session.attract) App.pause(); };
+  const dev = q.get('level');
+  if (dev) {
+    const used = Save.slots().findIndex((x) => x);
+    Save.start(used >= 0 ? used : 0);
+    App.session = App.make(dev);
+    hud.bind(App.session.game); hud.setMode(App.session.spec.kind);
+    hud.banner(App.session.spec.name, App.worldName(App.session.spec));
+    Snd.music(App.session.def.music || 'meadow');
+  } else {
+    App.title(true);
+  }
   UI.cover(false);
   requestAnimationFrame((n) => { last = n; frame(n); });
 }
 document.getElementById('hint').addEventListener('click', () => canvas.requestPointerLock && canvas.requestPointerLock());
+UI.cover(true);
 boot();

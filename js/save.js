@@ -9,6 +9,7 @@ const persist = () => { try { localStorage.setItem(KEY, JSON.stringify(data)); }
 export const Save = {
   slot: 0, cur: null,
   get settings() { return data.settings; },
+  lastSlot() { return data.last || 0; },
   saveSettings() { persist(); },
   slots() { return data.slots; },
   start(i, fresh = false) {

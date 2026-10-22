@@ -32,7 +32,7 @@ export const UI = {
     });
     box.appendChild(list);
     if (note) box.appendChild(el('p', 'note', note));
-    root.appendChild(box); root.classList.add('on');
+    root.appendChild(box); root.classList.add('on'); document.body.classList.add('ui-on');
     current = scr; UI._focus();
     return scr;
   },
@@ -40,14 +40,14 @@ export const UI = {
   custom(node, onBack, onConfirm) {
     UI.close();
     const box = el('div', 'screen wide'); box.appendChild(node);
-    root.appendChild(box); root.classList.add('on');
+    root.appendChild(box); root.classList.add('on'); document.body.classList.add('ui-on');
     current = { el: box, items: [], index: 0, onBack, onConfirm, nodes: [], list: null, custom: true };
     return current;
   },
 
   close() {
     if (current) { current.el.remove(); current = null; }
-    root.classList.remove('on');
+    root.classList.remove('on'); document.body.classList.remove('ui-on');
   },
 
   refresh() { if (current) current.nodes.forEach((n) => { if (n.it.value) n.v.textContent = n.it.value(); }); },
@@ -75,12 +75,12 @@ export const UI = {
       return true;
     }
     const n = current.items.length;
-    if (s.navUp) { current.index = (current.index - 1 + n) % n; UI._focus(); }
-    if (s.navDown) { current.index = (current.index + 1) % n; UI._focus(); }
+    if (s.navUp) { current.index = (current.index - 1 + n) % n; UI._focus(); UI.onSound && UI.onSound('menu'); }
+    if (s.navDown) { current.index = (current.index + 1) % n; UI._focus(); UI.onSound && UI.onSound('menu'); }
     if (s.navLeft) UI._activate(-1);
     if (s.navRight) UI._activate(1);
     if (s.confirmPressed) UI._activate(0);
-    if (s.backPressed && current.onBack) current.onBack();
+    if (s.backPressed && current.onBack) { UI.onSound && UI.onSound('back'); current.onBack(); }
     return true;
   },
 

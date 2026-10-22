@@ -4,7 +4,7 @@ import { vnoise } from '../levelgen.js';
 const sm = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 
 export default {
-  id: 'm5_skylark', name: 'Skylark Run', world: 'mossgate', kind: 'flight', seed: 51,
+  id: 'm5_skylark', name: 'Skylark Run', world: 'mossgate', kind: 'flight', seed: 51, music: 'flight',
   theme: {
     grass: 0x5fcf72, grass2: 0x86e096, rock: 0x9aa2b5, sand: 0xe6d79b, sandBelow: 1.2,
     sky: [0x2f86ff, 0xcdeeff], fog: 0xd2f0ff, fogNear: 120, fogFar: 520, water: 0x3fb8ff,
