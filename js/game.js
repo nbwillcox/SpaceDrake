@@ -36,8 +36,9 @@ export class Game {
     this.time = 0;
     this.hpMax = 3;
     this.sunFound = new Set((prog && prog.sunstones) || []);
-    this.state = { sunstones: 0, sunstoneTotal: 0, gems: 0, gemsTotal: 0, hp: 1, lives: this.settings.cozy ? Infinity : 3, elders: 0, eldersTotal: 0, deaths: 0, enemies: 0, kills: 0 };
-    this.invuln = 0; this.dying = 0; this.fade = 0; this.respawnAt = 0;
+    this.startHp = this.settings.cozy ? 2 : 1;
+    this.state = { sunstones: 0, sunstoneTotal: 0, gems: 0, gemsTotal: 0, hp: this.startHp, lives: this.settings.cozy ? Infinity : 3, elders: 0, eldersTotal: 0, deaths: 0, enemies: 0, kills: 0 };
+    this.invuln = 1.5; this.dying = 0; this.fade = 0; this.respawnAt = 0;
     this.toastText = ''; this.toastT = 0;
     this.gems = []; this.things = []; this.bolts = [];
     this.checkpoint = { x: spec.spawn[0], y: spec.spawn[1], z: spec.spawn[2], yaw: spec.spawn[3] };
@@ -171,6 +172,7 @@ export class Game {
 
   _releaseDrops(th, up = 5) {
     for (const g of th.drops) {
+      if (g.saved) continue;
       g.state = 2; g.x = th.x; g.y = th.y + 0.6; g.z = th.z; g.delay = 0.4;
       const a = Math.random() * TAU, s = rnd(1.5, 3.2);
       g.vx = Math.cos(a) * s; g.vz = Math.sin(a) * s; g.vy = up + Math.random() * 2;
@@ -199,13 +201,13 @@ export class Game {
       else if (this.dying <= 0) {
         const c = this.noLife ? this.safe : this.checkpoint;
         player.respawn(c.x, c.y, c.z, c.yaw); player.dead = false;
-        if (!this.noLife) S.hp = Math.max(S.hp, 1);
+        if (!this.noLife) S.hp = Math.max(S.hp, this.startHp);
         this.noLife = false; this.invuln = 2; this.events.push({ type: 'respawn' });
       }
     }
 
     // delayed spawns (boss exit portal) and arena limit
-    for (let i = this.pending.length - 1; i >= 0; i--) if (this.time >= this.pending[i].at) { this._spawn(this.pending[i].e); this.pending.splice(i, 1); this.toast('The way out is open!', 3); }
+    for (let i = this.pending.length - 1; i >= 0; i--) if (this.time >= this.pending[i].at) { const pe = this.pending[i].e; this.pending.splice(i, 1); this._spawn(pe); if (pe.t === 'exit') this.toast('The way out is open!', 3); }
     const ar = this.spec.arena;
     if (ar) {
       const ax = player.x - ar.x, az = player.z - ar.z, ad = Math.hypot(ax, az);
@@ -522,14 +524,14 @@ export class Game {
   // ---- visuals each frame
   render() {
     const gm = this.gemMesh, m = this._m, q = this._q, s = this._s, p = this._p;
-    const t = this.time;
+    const t = this.time, UP = this._up || (this._up = new THREE.Vector3(0, 1, 0));
     for (const g of this.gems) {
       if (g.state === 0) { s.set(0, 0, 0); p.set(0, -999, 0); }
       else {
         s.set(1, 1, 1);
         const bob = g.state === 1 ? Math.sin(t * 2.4 + g.phase) * 0.08 : 0;
         p.set(g.x, g.y + bob, g.z);
-        q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), t * 1.8 + g.phase);
+        q.setFromAxisAngle(UP, t * 1.8 + g.phase);
       }
       if (g.state === 0) q.identity();
       m.compose(p, q, s); gm.setMatrixAt(g.slot, m);

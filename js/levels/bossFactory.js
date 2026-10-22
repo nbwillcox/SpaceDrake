@@ -11,7 +11,7 @@ export function makeBossArena(o) {
     id: o.id, name: o.name, world: o.world, kind: 'boss', seed: o.seed, winTitle: o.winTitle || `${o.name} defeated!`,
     size: 140, theme: o.theme, music: o.music || 'boss',
     low: void_ ? { h: -10, amp: 0.6, scale: 0.03 } : o.liquid ? { h: o.liquid.y - 2.8, amp: 0.4, scale: 0.05 } : { h: 0.4, amp: 0.2, scale: 0.05 },
-    liquid: o.liquid, rim: 16, rimH: void_ ? 0 : 14,
+    liquid: o.liquid || (void_ ? { kind: 'cloud', y: -7 } : undefined), rim: 16, rimH: void_ ? 0 : 14,
     arena: { x: CX, z: CZ, r: R },
     nodes: { arena: { x: CX, z: CZ, r: R + 3, h: 1.6, edge: 3, bump: 0.05 } }, links: [],
     spawn: 'arena', spawnOff: [0, R - 8], spawnYaw: Math.PI,

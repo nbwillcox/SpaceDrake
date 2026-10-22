@@ -242,7 +242,7 @@ export class FlightSession {
       const along = tx_ * fwd.x + ty_ * fwd.y + tz_ * fwd.z;
       const d2 = tx_ * tx_ + ty_ * ty_ + tz_ * tz_;
       const lat2 = d2 - along * along;
-      const flameHit = this.flameT > 0 && !t.heavy && along > 1 && along < 22 && lat2 < Math.pow(2.4 + along * 0.2, 2);
+      const flameHit = this.flameT > 0 && !t.heavy && along > 1 && along < 22 && lat2 < Math.pow(3.2 + along * 0.25, 2);
       const dashHit = this.dash > 0 && d2 < 7;
       const heavyFlame = this.flameT > 0 && t.heavy && along > 1 && along < 22 && lat2 < 9 && (t.heat = (t.heat || 0) + dt) > 0.28;
       if (flameHit || dashHit || heavyFlame) {

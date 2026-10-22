@@ -80,7 +80,7 @@ export function makeLevel(o) {
   return {
     id: o.id, name: o.name, world: o.world, seed: o.seed, size: 200, theme: o.theme, music: o.music,
     low: o.low || (void_ ? { h: -30, amp: 1.2, scale: 0.03 } : o.liquid ? { h: o.liquid.y - 2.8, amp: 0.5, scale: 0.05 } : { h: 0.5, amp: 0.35, scale: 0.05 }),
-    liquid: o.liquid, shape: o.shape, rim: 16, rimH: void_ ? 0 : (o.rimH === undefined ? (o.liquid ? 14 : 16) : o.rimH),
+    liquid: o.liquid || (void_ ? { kind: 'cloud', y: -26.5 } : undefined), shape: o.shape, rim: 16, rimH: void_ ? 0 : (o.rimH === undefined ? (o.liquid ? 14 : 16) : o.rimH),
     nodes: L.nodes, links: L.links, spawn: L.spawn, spawnYaw: Math.atan2(B.x - A.x, B.z - A.z),
     entities: (c) => entitiesFor(c, L, o), fill: o.fillRules || fillFor(o), trails: 1,
     scatter: o.scatter || [], boxes: o.boxes, decor: o.decor, bridgeColor: o.bridgeColor, ferryColor: o.ferryColor, layout: L, opts: o,

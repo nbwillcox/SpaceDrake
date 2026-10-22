@@ -4,6 +4,17 @@ A neon, low-poly, real-3D collect-a-thon platformer in the spirit of the 1998 dr
 
 Primary player: MJ, casual, gamepad on a laptop connected to the living-room TV. Secondary: anyone on the web with a keyboard and mouse.
 
+## Build status (2026-10-22)
+
+All milestones M0-M9 are implemented. Differences from the plan below, worth knowing:
+
+- **Elders:** about 91 across the game (hub 2, four levels at 3 each, one flight reward and one boss reward per realm; the Keep has 11), not exactly 80. Gate counts are tuned to that: flight 4/15/28/41/54, bosses 9/22/35/48/61, final door 68. Cozy mode scales Elder gates by 75%.
+- **Levels:** Mossgate's six areas are hand-authored. Realms 2-6 use the layout generator (`js/layouts.js`) with per-realm themes and hazards (lava, wind gusts, void islands with a cloud floor). Every layout passes `node tools/validate.js`.
+- **Bosses:** Moss Golem (bespoke), plus Cinder Smith, Storm Roc, Glowmaw, Lantern Queen and Warlord Gloam on the data-driven engine in `js/boss.js`.
+- **Ground pound** was dropped: charge and flame cover every interaction.
+- **Not done:** touch controls (desktop and gamepad only, as planned), a secret 100% area, per-level medals.
+
+
 ## 1. IP rules (hard constraints)
 
 - Mechanics are free to copy: charge, glide, flame, gem collecting, rescue-the-dragons, hub plus portal levels, flight levels, thieves that run off with loot, bosses.

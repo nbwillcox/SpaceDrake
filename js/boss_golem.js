@@ -82,7 +82,7 @@ export class GolemBoss {
     this.defeated = true; this.setState('dead', 0);
     game.events.push({ type: 'bossdead', x: this.x, y: this.y + 3, z: this.z });
     game.toast('The Moss Golem crumbles!', 4);
-    for (const g of this.gemDrops) { g.state = 2; g.x = this.x; g.y = this.y + 2; g.z = this.z; g.delay = 0.6; const a = Math.random() * TAU, s = rnd(2, 6); g.vx = Math.cos(a) * s; g.vz = Math.sin(a) * s; g.vy = rnd(6, 11); }
+    for (const g of this.gemDrops) { if (g.saved) continue; g.state = 2; g.x = this.x; g.y = this.y + 2; g.z = this.z; g.delay = 0.6; const a = Math.random() * TAU, s = rnd(2, 6); g.vx = Math.cos(a) * s; g.vz = Math.sin(a) * s; g.vy = rnd(6, 11); }
     game.bossDefeated = true; game.boss = null;
     game.pending.push({ at: game.time + 3.5, e: { t: 'exit', x: this.arena.x, z: this.arena.z + 9 } });
     this.shock.visible = false; this.tel.visible = false;

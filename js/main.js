@@ -156,10 +156,13 @@ const App = window.SD = {
 let last = performance.now();
 function frame(now) {
   requestAnimationFrame(frame);
-  const dt = Math.min(0.1, (now - last) / 1000); last = now;
+  const rawDt = (now - last) / 1000;
+  const dt = Math.min(0.1, rawDt); last = now;
+  adaptScale(rawDt);
   const inp = Input.poll();
   const s = App.session;
   if (inp.usingPad && inp.buttons.some((b) => b)) Snd.unlock();
+  const hintEl = document.getElementById('hint'); if (hintEl) hintEl.style.display = (inp.usingPad || inp.locked) ? 'none' : '';
   if (s && s.attract) { const t = now / 1000; s.freeCam = { pos: [100 + Math.cos(t * 0.12) * 58, 20 + Math.sin(t * 0.07) * 4, 100 + Math.sin(t * 0.12) * 58], look: [100, 5, 100] }; }
   if (UI.active()) UI.update(inp);
   else if (s && !App.busy && inp.pausePressed) App.pause();
@@ -173,6 +176,19 @@ function frame(now) {
     renderer.render(s.scene, camera);
   }
   if (showDbg) updateDbg();
+}
+
+// Adaptive resolution: keep roughly 60 fps on weak laptop GPUs and 4K TVs by trading pixels for frames.
+let prCur = Math.min(devicePixelRatio || 1, 1.5), emaMs = 16, slowT = 0, fastT = 0;
+function prMax() { const w = canvas.clientWidth || 1280, h = canvas.clientHeight || 720; return Math.max(0.55, Math.min(devicePixelRatio || 1, 1.5, Math.sqrt(3.4e6 / (w * h)))); }
+function adaptScale(rawDt) {
+  if (rawDt > 0.25 || rawDt <= 0) return;
+  emaMs += (rawDt * 1000 - emaMs) * 0.06;
+  if (emaMs > 26) { slowT += rawDt; fastT = 0; } else if (emaMs < 15.5) { fastT += rawDt; slowT = 0; } else { slowT = fastT = 0; }
+  const max = prMax();
+  if (slowT > 1.2 && prCur > 0.55) { prCur = Math.max(0.55, prCur - 0.15); slowT = 0; emaMs = 18; renderer.setPixelRatio(prCur); }
+  else if (fastT > 6 && prCur < max) { prCur = Math.min(max, prCur + 0.1); fastT = 0; renderer.setPixelRatio(prCur); }
+  else if (prCur > max + 0.01) { prCur = max; renderer.setPixelRatio(prCur); }
 }
 
 function resize() {

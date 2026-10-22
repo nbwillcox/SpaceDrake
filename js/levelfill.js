@@ -88,6 +88,9 @@ export function applyFill(spec, rules) {
     while (placed < want && tries++ < want * 60) {
       const [x, z] = cells[Math.floor(r() * cells.length)];
       if (!free(x, z, rule.gap || 2.5)) continue;
+      const sd = Math.hypot(x - spec.spawn[0], z - spec.spawn[2]);
+      if (rule.t === 'enemy' && sd < 18) continue;
+      if (sd < 3) continue;
       const add = [];
       switch (rule.t) {
         case 'pile': for (let i = 0; i < (rule.count || 5); i++) { const a = i * 2.4, rr = 0.38 * Math.sqrt(i); add.push({ t: 'gem', x: x + Math.cos(a) * rr, z: z + Math.sin(a) * rr, v: rule.v || 1 }); } break;

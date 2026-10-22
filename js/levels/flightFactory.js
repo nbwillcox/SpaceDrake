@@ -50,7 +50,7 @@ export function makeFlight(o) {
         for (let k = 1; k <= 8; k++) { const ss = s - (o.ringGap || 52) + k * 5.5, [gx, gy] = weave(ss); out.push({ t: 'gem', s: ss, ox: gx, oy: gy, v: (n % 6 === 5 && k === 4) ? 5 : 1 }); }
         n++;
       }
-      for (let s = 95, i = 0; s < L - 60; s += 63, i++) { const [ox, oy] = weave(s); out.push({ t: 'target', s, ox: ox + (i % 2 ? 8 : -8), oy: oy + (rr() - 0.5) * 3, heavy: i % 6 === 5 }); }
+      for (let s = 95, i = 0; s < L - 60; s += 63, i++) { const [ox, oy] = weave(s); out.push({ t: 'target', s, ox: ox + (i % 2 ? 6 : -6), oy: oy + (rr() - 0.5) * 3, heavy: i % 6 === 5 }); }
       for (let s = 150; s < L - 80; s += o.rockGap || 97) { const [ox, oy] = weave(s); out.push({ t: 'rock', s, ox: -Math.sign(ox || 1) * 7, oy, r: 2.2 }); }
       for (let k = 0; k < 14; k++) { const s = L - 150 + k * 6, [gx] = weave(s); out.push({ t: 'gem', s, ox: gx, oy: 6 - k * 0.5, v: 2 }); }
       return out;

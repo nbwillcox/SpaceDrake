@@ -181,7 +181,7 @@ export class Boss {
     this.setState('dead', 0); this.t2 = 0;
     game.events.push({ type: 'bossdead', x: this.x, y: this.y + 3, z: this.z });
     game.toast(`${this.cfg.name} is defeated!`, 4);
-    for (const g of this.gemDrops) { g.state = 2; g.x = this.x; g.y = this.y + 2; g.z = this.z; g.delay = 0.6; const a = Math.random() * TAU, s = rnd(2, 6); g.vx = Math.cos(a) * s; g.vz = Math.sin(a) * s; g.vy = rnd(6, 11); }
+    for (const g of this.gemDrops) { if (g.saved) continue; g.state = 2; g.x = this.x; g.y = this.y + 2; g.z = this.z; g.delay = 0.6; const a = Math.random() * TAU, s = rnd(2, 6); g.vx = Math.cos(a) * s; g.vz = Math.sin(a) * s; g.vy = rnd(6, 11); }
     game.bossDefeated = true; game.boss = null;
     this.shock.visible = this.tel.visible = this.strip.visible = this.beamMesh.visible = false; this._clearZones();
     for (const n of this.nodes) n.mesh.visible = false; this.nodes.length = 0;

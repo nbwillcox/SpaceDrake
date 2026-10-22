@@ -51,8 +51,9 @@ export class Session {
     this.boxGroup = new THREE.Group(); scene.add(this.boxGroup); buildBoxMeshes(world, this.boxGroup);
     scene.add(buildDecor(spec, th));
     if (spec.liquid) {
-      const lc = spec.liquid.kind === 'lava' ? 0xff6a2a : (th.water || 0x3fb8ff);
-      const wm = new THREE.Mesh(new THREE.PlaneGeometry(spec.size * 1.6, spec.size * 1.6), new THREE.MeshLambertMaterial({ color: lc, transparent: true, opacity: spec.liquid.kind === 'lava' ? 0.95 : 0.74, emissive: spec.liquid.kind === 'lava' ? 0xaa3300 : 0x0a2a44 }));
+      const cloud = spec.liquid.kind === 'cloud';
+      const lc = spec.liquid.kind === 'lava' ? 0xff6a2a : cloud ? 0xf4f8ff : (th.water || 0x3fb8ff);
+      const wm = new THREE.Mesh(new THREE.PlaneGeometry(spec.size * 6, spec.size * 6), new THREE.MeshLambertMaterial({ color: lc, transparent: true, opacity: spec.liquid.kind === 'lava' ? 0.95 : cloud ? 0.97 : 0.74, emissive: spec.liquid.kind === 'lava' ? 0xaa3300 : cloud ? 0x8a9ab8 : 0x0a2a44 }));
       wm.rotation.x = -Math.PI / 2; wm.position.set(spec.size / 2, spec.liquid.y, spec.size / 2); scene.add(wm); this.water = wm;
     }
 

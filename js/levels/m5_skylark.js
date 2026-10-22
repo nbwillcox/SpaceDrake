@@ -33,7 +33,7 @@ export default {
     // lanterns left and right of the line
     for (let s = 95, i = 0; s < L - 60; s += 63, i++) {
       const [ox, oy] = weave(s);
-      out.push({ t: 'target', s, ox: ox + (i % 2 ? 8 : -8), oy: oy + (r() - 0.5) * 3, heavy: i % 6 === 5 });
+      out.push({ t: 'target', s, ox: ox + (i % 2 ? 6 : -6), oy: oy + (r() - 0.5) * 3, heavy: i % 6 === 5 });
     }
     // rocks to dodge, on the opposite side of the weave
     for (let s = 150; s < L - 80; s += 97) { const [ox, oy] = weave(s); out.push({ t: 'rock', s, ox: -Math.sign(ox || 1) * 7, oy, r: 2.2 }); }
