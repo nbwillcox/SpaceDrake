@@ -108,6 +108,7 @@ function runBot(world, p, targets, mode, maxT, from, A, B) {
 
 for (const id of ids) {
   console.log(`\n== ${id}`);
+  if (LEVELS[id].kind === 'flight' || LEVELS[id].kind === 'boss') { console.log(`  ${LEVELS[id].kind} level: no node graph, checked in the browser`); continue; }
   const spec = buildSpec(LEVELS[id]);
   const world = makeWorld(spec);
   // slopes

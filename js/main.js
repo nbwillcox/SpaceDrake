@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { Input } from './input.js';
 import { Session, STEP } from './session.js';
+import { FlightSession } from './flight.js';
 import { LEVELS, START_LEVEL, HUBS } from './levels/index.js';
 import { Hud } from './hud.js';
 import { UI } from './ui.js';
@@ -20,7 +21,9 @@ let showDbg = q.has('dbg');
 const App = window.SD = {
   THREE, renderer, camera, hud, UI, Save, Input,
   session: null, paused: false, camLocked: false, busy: false,
-  sfx: null,
+  sfx: null, levels: LEVELS,
+
+  make(id, opts) { return LEVELS[id].kind === 'flight' ? new FlightSession(App, id) : new Session(App, id, opts); },
 
   async goto(id, opts = {}) {
     if (App.busy) return;
@@ -28,8 +31,9 @@ const App = window.SD = {
     await UI.transition(() => {
       UI.close();
       if (App.session) { App.session.dispose(); App.session = null; }
-      App.session = new Session(App, id, opts);
+      App.session = App.make(id, opts);
       hud.bind(App.session.game);
+      hud.setMode(App.session.spec.kind);
       App.paused = false;
       const s = App.session.spec;
       hud.banner(s.name, App.worldName(s), 2800);
@@ -48,8 +52,23 @@ const App = window.SD = {
     const node = UI.el('div');
     const row = (k, v, n, full) => `<span class="k">${k}</span><span class="v ${full ? 'full' : ''}">${v}</span><span class="n">${n}</span>`;
     const t = Math.round(session.time), mm = String(Math.floor(t / 60)), ss = String(t % 60).padStart(2, '0');
-    node.innerHTML = `<h1>${session.spec.name} complete!</h1><p class="sub">${App.worldName(session.spec)}</p>
+    node.innerHTML = `<h1>${session.def.winTitle || session.spec.name + ' complete!'}</h1><p class="sub">${App.worldName(session.spec)}</p>
       <div class="stats">${row('Gems', S.gems, '/ ' + S.gemsTotal, S.gems >= S.gemsTotal)}${row('Elders rescued', S.elders, '/ ' + S.eldersTotal, S.elders >= S.eldersTotal)}${row('Time', mm + ':' + ss, '')}</div>
+      <p class="hint">Press A / Enter to continue</p>`;
+    const go = () => { UI.close(); App.leave(session); };
+    UI.custom(node, go, go);
+  },
+
+  onFlightDone(session) {
+    session.commit(true);
+    const st = session.stats, ok = st.rings >= st.ringsTotal * 0.6 && st.targets >= st.targetsTotal * 0.5;
+    const perfect = st.rings === st.ringsTotal && st.targets === st.targetsTotal;
+    const node = UI.el('div');
+    const row = (k, v, n, full) => `<span class="k">${k}</span><span class="v ${full ? 'full' : ''}">${v}</span><span class="n">${n}</span>`;
+    const t = Math.round(session.time), mm = String(Math.floor(t / 60)), ss = String(t % 60).padStart(2, '0');
+    node.innerHTML = `<h1>${session.spec.name} complete!</h1><p class="sub">${App.worldName(session.spec)}</p>
+      <div class="stats">${row('Rings', st.rings, '/ ' + st.ringsTotal, st.rings === st.ringsTotal)}${row('Lanterns lit', st.targets, '/ ' + st.targetsTotal, st.targets === st.targetsTotal)}${row('Gems', st.gems, '/ ' + session.gemTotalValue, false)}${row('Time', mm + ':' + ss, '')}</div>
+      <p class="sub">${perfect ? 'Perfect flight!' : ok ? 'An Elder is grateful: rescued!' : 'Get 60% of the rings and half the lanterns to rescue the Elder.'}</p>
       <p class="hint">Press A / Enter to continue</p>`;
     const go = () => { UI.close(); App.leave(session); };
     UI.custom(node, go, go);
@@ -95,6 +114,7 @@ function frame(now) {
     else s.acc = 0;
     s.render(dt, s.acc / STEP);
     hud.update();
+    if (s.stats) hud.flight(s.stats);
     resize();
     renderer.render(s.scene, camera);
   }
@@ -124,7 +144,7 @@ App.step = (n = 1, inp = {}) => {
     Object.assign(s.pending, { jumpPressed: !!(inp.jumpPressed && i === 0), flamePressed: !!(inp.flamePressed && i === 0), chargePressed: !!(inp.chargePressed && i === 0) });
     s.simStep(Object.assign(base, inp));
   }
-  s.acc = 0; s.lastInp = Object.assign({ csx: 0, csy: 0, cdx: 0, cdy: 0 }, base, inp); s.render(STEP, 1); hud.update(); resize(); renderer.render(s.scene, camera);
+  s.acc = 0; s.lastInp = Object.assign({ csx: 0, csy: 0, cdx: 0, cdy: 0 }, base, inp); s.render(STEP, 1); hud.update(); if (s.stats) hud.flight(s.stats); resize(); renderer.render(s.scene, camera);
 };
 
 // ---------- boot
@@ -133,8 +153,9 @@ function boot() {
   Save.start(used >= 0 ? used : 0);
   const id = q.get('level') || START_LEVEL;
   UI.cover(true);
-  App.session = new Session(App, id);
+  App.session = App.make(id);
   hud.bind(App.session.game);
+  hud.setMode(App.session.spec.kind);
   hud.banner(App.session.spec.name, App.worldName(App.session.spec));
   UI.cover(false);
   requestAnimationFrame((n) => { last = n; frame(n); });

@@ -2,6 +2,7 @@
 import * as THREE from 'three';
 import { P } from './controller.js';
 import * as Props from './art/props.js';
+import { GolemBoss } from './boss_golem.js';
 
 const TAU = Math.PI * 2;
 const rnd = (a, b) => a + Math.random() * (b - a);
@@ -26,6 +27,7 @@ export class Game {
     this.totals = totals || { gems: 0, elders: 0, sunstones: 0 };
     this.collected = new Set(this.prog.gemSlots || []);
     this.eldersFound = new Set(this.prog.elders || []);
+    this.pending = []; this.boss = null; this.bossDefeated = false;
     this.elderCount = 0; this.finished = false; this.exitT = 0; this.safeT = 0;
     this.settings = settings || { cozy: true };
     this.group = new THREE.Group(); scene.add(this.group);
@@ -69,6 +71,7 @@ export class Game {
   _spawn(e) {
     const w = this.world;
     if (e.t === 'thief') e = Object.assign({}, e, { t: 'enemy', kind: 'thief' });
+    if (e.t === 'golem') { this.things.push(new GolemBoss(this, e)); return; }
     if (e.t === 'gem') { const y = e.y !== undefined ? e.y : this.gy(e.x, e.z) + 0.65; this._newGem(e.x, y, e.z, e.v || 1, 1); return; }
     const y = e.y !== undefined ? e.y : this.gy(e.x, e.z);
     const th = { kind: e.t, x: e.x, y, z: e.z, alive: true, r: 0.6, ry: e.yaw || 0, drops: [] };
@@ -118,7 +121,8 @@ export class Game {
       case 'lantern': th.mesh = Props.makeLantern(); th.r = 1.3; th.lit = false; break;
       case 'exit': th.mesh = Props.makePortal(0x7ff0ff, 'Level exit'); th.r = 1.8; break;
       case 'portal': th.mesh = Props.makePortal(e.color || 0xffc86b, e.label || 'Portal', e.need ? needText(e.need) : ''); th.r = 1.8; th.target = e.target; th.need = e.need; th.label = e.label; th.cool = 0; break;
-      case 'elder': th.mesh = Props.makeElder(); th.r = 1.7; th.tip = e.tip || 'Thank you, little one!'; th.freed = false; th.idx = this.elderCount++; this.state.eldersTotal++;
+      case 'elder': th.mesh = Props.makeElder(); th.r = 1.7; th.tip = e.tip || 'Thank you, little one!'; th.freed = false; th.idx = this.elderCount++;
+        if (e.afterBoss) { th.pendingBoss = true; th.mesh.visible = false; } this.state.eldersTotal++;
         if (this.eldersFound.has(th.idx)) { th.alive = false; th.freed = true; th.t = Math.random() * 6; th.mesh.userData.crystal.visible = false; th.mesh.userData.free.visible = true; this.state.elders++; }
         break;
     }
@@ -187,6 +191,14 @@ export class Game {
       }
     }
 
+    // delayed spawns (boss exit portal) and arena limit
+    for (let i = this.pending.length - 1; i >= 0; i--) if (this.time >= this.pending[i].at) { this._spawn(this.pending[i].e); this.pending.splice(i, 1); this.toast('The way out is open!', 3); }
+    const ar = this.spec.arena;
+    if (ar) {
+      const ax = player.x - ar.x, az = player.z - ar.z, ad = Math.hypot(ax, az);
+      if (ad > ar.r) { const k = ar.r / ad; player.x = ar.x + ax * k; player.z = ar.z + az * k; }
+    }
+
     // safe-spot tracking and liquid hazards
     this.safeT -= dt;
     const liqY = this.world.liquid ? this.world.liquid.y : -1e9;
@@ -230,11 +242,13 @@ export class Game {
     // things
     for (const th of this.things) {
       if (!th.alive) { if (th.kind === 'elder') this._updateElder(th, dt); continue; }
+      if (th.pendingBoss) { if (this.bossDefeated) { th.pendingBoss = false; th.mesh.visible = true; this.events.push({ type: 'rescue', x: th.x, y: th.y + 1, z: th.z }); } else continue; }
       const dx = th.x - px, dz = th.z - pz, dy = th.y - py;
       const dist = Math.hypot(dx, dz);
       const fwd = dx * fxd + dz * fzd, lat = dx * fzd - dz * fxd;
       const inCone = flaming && fwd > -0.2 && fwd < 3.0 && Math.abs(lat) < fwd * 0.65 + 0.7 && Math.abs(dy) < 1.8 && !(th.flameId === player.flameId);
       const inCharge = charging && fwd > -0.5 && fwd < 1.5 + th.r && Math.abs(lat) < 0.8 + th.r && Math.abs(dy) < 1.4;
+      if (th.tick) { th.tick(dt, player, inCone, inCharge, alive); continue; }
       switch (th.kind) {
         case 'crate': case 'vase':
           if (inCone || inCharge) this._kill(th, inCharge ? 'charge' : 'flame');

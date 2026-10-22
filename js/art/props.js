@@ -267,3 +267,40 @@ export function makeSpikes(w, d) {
   for (let i = 0; i < nx; i++) for (let j = 0; j < nz; j++) g.add(mesh(new THREE.ConeGeometry(0.15, 0.7, 5), M(0xc7cbd9), (i / nx - 0.5 + 0.5 / nx) * w, 0.35, (j / nz - 0.5 + 0.5 / nz) * d));
   return g;
 }
+
+// ---- flight course props
+export function makeFlightRing(r) {
+  const g = new THREE.Group();
+  const mat = new THREE.MeshBasicMaterial({ color: 0x6ff5ff });
+  const tor = mesh(new THREE.TorusGeometry(r, 0.22, 8, 36), mat); g.add(tor);
+  const disc = mesh(new THREE.CircleGeometry(r, 28), new THREE.MeshBasicMaterial({ color: 0x6ff5ff, transparent: true, opacity: 0.12, side: THREE.DoubleSide, depthWrite: false })); g.add(disc);
+  const inner = mesh(new THREE.TorusGeometry(r * 0.7, 0.07, 6, 28), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5 })); g.add(inner);
+  g.userData.tick = (t) => { inner.rotation.z = t * 0.9; disc.material.opacity = 0.1 + Math.sin(t * 3) * 0.04; };
+  g.userData.hit = () => { mat.color.setHex(0xffd23e); disc.material.color.setHex(0xffd23e); inner.visible = false; };
+  g.userData.miss = () => { mat.color.setHex(0x8a8aa0); disc.visible = false; inner.visible = false; };
+  return g;
+}
+
+export function makeFlightTarget(heavy) {
+  const g = new THREE.Group();
+  if (!heavy) {
+    const body = mesh(ico(0.8, 1), new THREE.MeshLambertMaterial({ color: 0xff7a4a, emissive: 0x662200, flatShading: true }), 0, 0, 0); body.scale.set(1, 1.2, 1); g.add(body);
+    const glow = mesh(ico(0.55, 1), B(0xffd36a)); glow.scale.set(1, 1.2, 1); g.add(glow);
+    g.add(mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.2, 8), M(0x5b3a1a), 0, 1.05, 0));
+    g.add(mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.2, 8), M(0x5b3a1a), 0, -1.05, 0));
+  } else {
+    g.add(mesh(ico(1.3, 1), M(0x8794ad), 0, 0, 0));
+    for (let i = 0; i < 8; i++) { const a = (i / 8) * 6.283; const sp = mesh(new THREE.ConeGeometry(0.2, 0.7, 5), M(0xd8dde8), Math.cos(a) * 1.35, Math.sin(a * 2) * 0.5, Math.sin(a) * 1.35); sp.lookAt(Math.cos(a) * 3, Math.sin(a * 2) * 1.2, Math.sin(a) * 3); sp.rotateX(Math.PI / 2); g.add(sp); }
+    g.add(mesh(ico(0.5, 1), B(0xff8a3a), 0, 0, 0.8));
+  }
+  g.userData.spin = (t) => { g.rotation.y = t * 0.8; };
+  return g;
+}
+
+export function makeFlightRock(r) {
+  const g = new THREE.Group();
+  g.add(mesh(ico(r, 1), M(0x8f95a8), 0, 0, 0));
+  g.add(mesh(ico(r * 0.55, 0), M(0xb6bccd), r * 0.6, r * 0.3, 0));
+  g.add(mesh(new THREE.ConeGeometry(r * 0.45, r * 1.6, 5), M(0xaab0c4), 0, r * 1.1, 0));
+  return g;
+}

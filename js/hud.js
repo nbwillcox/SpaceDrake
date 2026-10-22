@@ -13,11 +13,23 @@ export class Hud {
       <div class="pill lives"><span class="ico heart"></span><b id="h-lives">∞</b></div>
       <div class="pill suns" id="h-suns"><span class="ico sunico"></span><b id="h-sun">0</b><small id="h-suntot"></small></div>
       <div class="pill elders"><span class="ico eld"></span><b id="h-eld">0</b><small id="h-eldtot"></small></div>
-      <div id="banner"></div><div id="toast"></div><div id="fade"></div><div id="prompt"></div>`;
+      <div id="bossbar"><div class="nm"></div><div class="bar"><i></i></div></div><div id="banner"></div><div id="toast"></div><div id="fade"></div><div id="prompt"></div>`;
     document.body.appendChild(root);
     this.$ = (id) => document.getElementById(id);
     this.last = {};
     this.gemsEl = this.$('h-gems');
+  }
+
+  setMode(kind) {
+    this.mode = kind; document.getElementById('hud').dataset.mode = kind;
+    const f = document.getElementById('fhud'); if (f) f.style.display = kind === 'flight' ? 'flex' : 'none';
+  }
+
+  flight(st) {
+    let f = document.getElementById('fhud');
+    if (!f) { f = document.createElement('div'); f.id = 'fhud'; f.innerHTML = '<div class="pill"><b id="f-ring">0</b><small id="f-ringt"></small><span>rings</span></div><div class="pill"><b id="f-tar">0</b><small id="f-tart"></small><span>lanterns</span></div>'; document.getElementById('hud').appendChild(f); }
+    f.style.display = 'flex';
+    this.set('f-ring', st.rings); this.set('f-ringt', '/' + st.ringsTotal); this.set('f-tar', st.targets); this.set('f-tart', '/' + st.targetsTotal);
   }
 
   bind(game) { this.game = game; this.last = {}; }
@@ -43,6 +55,8 @@ export class Hud {
       pips[i].style.background = on ? hex(WICK_COLORS[S.hp]) : 'rgba(255,255,255,0.12)';
       pips[i].style.boxShadow = on ? `0 0 10px ${hex(WICK_COLORS[S.hp])}` : 'none';
     }
+    const bb = this.$('bossbar');
+    if (g.boss) { bb.classList.add('on'); bb.firstChild.textContent = g.boss.name; bb.lastChild.firstChild.style.width = (100 * g.boss.hp / g.boss.max) + '%'; } else bb.classList.remove('on');
     const t = this.$('toast');
     const show = g.toastT > 0;
     if (this.last.toast !== (show ? g.toastText : '')) { this.last.toast = show ? g.toastText : ''; t.textContent = this.last.toast; }

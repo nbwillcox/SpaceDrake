@@ -65,3 +65,14 @@ html, body { margin: 0; height: 100%; background: #0b1020; overflow: hidden; fon
 
 #hud .suns { left: 18px; top: 134px; }
 #hud .sunico { background: radial-gradient(circle at 35% 35%, #fff6b0, #ffb82e 60%, #d9761f); border-radius: 50%; width: 22px; height: 22px; box-shadow: 0 0 10px #ffc23e; }
+
+#hud[data-mode=flight] .wick, #hud[data-mode=flight] .lives, #hud[data-mode=flight] .suns, #hud[data-mode=flight] .elders { display: none !important; }
+#fhud { position: absolute; right: 18px; top: 14px; display: none; flex-direction: column; gap: 10px; align-items: flex-end; }
+#fhud .pill { position: static; }
+#fhud .pill span { font-size: .55em; opacity: .7; font-weight: 600; }
+
+#bossbar { position: absolute; left: 50%; top: 14px; transform: translateX(-50%); width: min(520px, 56vw); text-align: center; opacity: 0; transition: opacity .3s; }
+#bossbar.on { opacity: 1; }
+#bossbar .nm { font-size: clamp(18px, 2.2vw, 28px); letter-spacing: .1em; margin-bottom: 4px; }
+#bossbar .bar { height: 16px; border-radius: 999px; background: rgba(10,16,38,.7); border: 1px solid rgba(255,170,120,.6); overflow: hidden; }
+#bossbar .bar i { display: block; height: 100%; width: 100%; background: linear-gradient(90deg, #ff6a3c, #ffd23e); transition: width .35s; }
