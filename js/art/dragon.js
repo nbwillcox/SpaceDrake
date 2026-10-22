@@ -53,20 +53,28 @@ export function createDragon() {
   };
   legAt(0.18, 0.25); legAt(-0.18, 0.25); legAt(0.18, -0.25); legAt(-0.18, -0.25);
 
-  // wings
+  // wings: membrane + finger bones, 1.7x so they read at game distance
   const wings = [];
+  const WS = 1.7;
+  const V = (x, y, z) => new THREE.Vector3(x * WS, y * WS, z * WS);
+  const pts = { root: V(0, 0, 0), tipA: V(0.62, 0.2, -0.1), tipB: V(0.5, 0.0, -0.34), tipC: V(0.22, -0.02, -0.34), tipD: V(0.06, 0, -0.26) };
   const wingGeo = new THREE.BufferGeometry();
-  wingGeo.setAttribute('position', new THREE.Float32BufferAttribute([
-    0, 0, 0, 0.62, 0.2, -0.1, 0.5, 0.02, -0.34,
-    0, 0, 0, 0.5, 0.02, -0.34, 0.22, -0.02, -0.34,
-    0, 0, 0, 0.22, -0.02, -0.34, 0.06, 0, -0.26,
-  ], 3));
+  const tri = [pts.root, pts.tipA, pts.tipB, pts.root, pts.tipB, pts.tipC, pts.root, pts.tipC, pts.tipD];
+  wingGeo.setAttribute('position', new THREE.Float32BufferAttribute(tri.flatMap((v) => [v.x, v.y, v.z]), 3));
   wingGeo.computeVertexNormals();
+  const bone = (a, b, r, m) => {
+    const d = new THREE.Vector3().subVectors(b, a), len = d.length();
+    const o = mesh(new THREE.CylinderGeometry(r, r, len, 5), m);
+    o.position.copy(a).addScaledVector(d, 0.5);
+    o.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.normalize());
+    return o;
+  };
   for (const s of [1, -1]) {
-    const pivot = new THREE.Group(); pivot.position.set(0.16 * s, 0.22, 0.02); body.add(pivot);
-    const w = mesh(wingGeo, wingMat); w.scale.x = s; pivot.add(w);
-    const bone = mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.64, 4), amberD, 0.31 * s, 0.1, -0.05);
-    bone.rotation.z = Math.PI / 2 - 0.3 * s * -1 * 0 + (s > 0 ? -0.32 : 0.32); pivot.add(bone);
+    const pivot = new THREE.Group(); pivot.position.set(0.16 * s, 0.24, 0.02); body.add(pivot);
+    const inner = new THREE.Group(); inner.scale.x = s; pivot.add(inner);
+    inner.add(mesh(wingGeo, wingMat));
+    inner.add(bone(pts.root, pts.tipA, 0.022, amberD), bone(pts.root, pts.tipB, 0.016, amberD), bone(pts.root, pts.tipC, 0.014, amberD));
+    inner.add(mesh(ico(0.035, 0), amber, pts.tipA.x, pts.tipA.y, pts.tipA.z));
     wings.push(pivot);
   }
 
@@ -81,7 +89,7 @@ export function createDragon() {
   const tip = mesh(new THREE.ConeGeometry(0.08, 0.26, 6), amber, 0, 0, -0.2); tip.rotation.x = -Math.PI / 2; tail[4].add(tip);
   const tipGlow = mesh(ico(0.07, 0), glowMat, 0, 0, -0.34); tail[4].add(tipGlow);
 
-  const st = { phase: 0, squash: 0, flap: 0, lean: 0, wing: 0, t: 0, bob: 0 };
+  const st = { phase: 0, squash: 0, flap: 0, lean: 0, wing: 0, wingY: 1.3, t: 0, bob: 0 };
 
   function update(dt, p) {
     st.t += dt;
@@ -110,16 +118,16 @@ export function createDragon() {
     const yr = (p.yawRate || 0);
     body.rotation.z += ((-yr * 0.04) - body.rotation.z) * (1 - Math.exp(-10 * dt));
 
-    // wings: folded on ground, flap in air, spread to glide
-    let wz, wy;
-    if (p.gliding) { wz = 0.05 + Math.sin(st.t * 14) * 0.03; wy = 0; }
-    else if (!p.onGround) { st.flap += dt * (p.vy > 0 ? 18 : 9); wz = 0.4 + Math.sin(st.flap) * 0.55; wy = 0; }
-    else if (p.charging) { wz = -1.4; wy = 0; }
-    else { wz = -1.15 + Math.sin(st.t * 3) * 0.04; wy = 0; }
+    // wings: swept back and folded on the ground, flapping in the air, spread to glide
+    let wz, wyT;
+    if (p.gliding) { wz = 0.08 + Math.sin(st.t * 14) * 0.03; wyT = 0.18; }
+    else if (!p.onGround) { st.flap += dt * (p.vy > 0 ? 18 : 9); wz = 0.35 + Math.sin(st.flap) * 0.6; wyT = 0.15; }
+    else if (p.charging) { wz = -0.55; wyT = 1.5; }
+    else { wz = -0.45 + Math.sin(st.t * 3) * 0.04; wyT = 1.3; }
     st.wing += (wz - st.wing) * (1 - Math.exp(-16 * dt));
+    st.wingY += (wyT - st.wingY) * (1 - Math.exp(-12 * dt));
     wings[0].rotation.z = st.wing; wings[1].rotation.z = -st.wing;
-    const spread = p.gliding ? 0 : (p.onGround ? 0.8 : 0.25);
-    wings[0].rotation.y = -spread; wings[1].rotation.y = spread;
+    wings[0].rotation.y = st.wingY; wings[1].rotation.y = -st.wingY;
 
     // head: look up when flaming, down when charging
     const hp = p.flaming ? -0.45 : p.charging ? 0.4 : (p.vy > 3 ? -0.15 : 0.05);

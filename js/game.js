@@ -15,11 +15,17 @@ const ENEMY = {
   spitter: { speed: 0, hp: 1, r: 0.45, drop: [2, 2] },
   brute: { speed: 1.6, hp: 4, r: 0.95, drop: [5, 5, 10, 10] },
 };
+function needText(n) { return n.elders ? `${n.elders} Elders` : n.gems ? `${n.gems} gems` : ''; }
 export const WICK_COLORS = [0x000000, 0xcfe9ff, 0xff9a3c, 0xffd860];
 
 export class Game {
-  constructor({ scene, world, spec, settings }) {
+  constructor({ scene, world, spec, settings, prog, totals }) {
     this.scene = scene; this.world = world; this.spec = spec;
+    this.prog = prog || { gemSlots: [], elders: [] };
+    this.totals = totals || { gems: 0, elders: 0, sunstones: 0 };
+    this.collected = new Set(this.prog.gemSlots || []);
+    this.eldersFound = new Set(this.prog.elders || []);
+    this.elderCount = 0; this.finished = false; this.exitT = 0; this.safeT = 0;
     this.settings = settings || { cozy: true };
     this.group = new THREE.Group(); scene.add(this.group);
     this.events = [];
@@ -30,6 +36,8 @@ export class Game {
     this.toastText = ''; this.toastT = 0;
     this.gems = []; this.things = []; this.bolts = [];
     this.checkpoint = { x: spec.spawn[0], y: spec.spawn[1], z: spec.spawn[2], yaw: spec.spawn[3] };
+    this.safe = { x: spec.spawn[0], y: spec.spawn[1], z: spec.spawn[2], yaw: spec.spawn[3] };
+    this.noLife = false;
     this._m = new THREE.Matrix4(); this._q = new THREE.Quaternion(); this._s = new THREE.Vector3(1, 1, 1); this._p = new THREE.Vector3(); this._c = new THREE.Color();
     this._g = {};
     this.wick = Props.makeWick(); this.group.add(this.wick); this.wickA = 0;
@@ -40,7 +48,9 @@ export class Game {
 
   _newGem(x, y, z, v, state = 1) {
     const g = { x, y, z, v, state, vx: 0, vy: 0, vz: 0, t: 0, phase: Math.random() * TAU, slot: this.gems.length, delay: 0 };
-    this.gems.push(g); this.state.gemsTotal += v; return g;
+    this.gems.push(g); this.state.gemsTotal += v;
+    if (this.collected.has(g.slot)) { g.state = 0; g.saved = true; this.state.gems += v; }
+    return g;
   }
 
   _build() {
@@ -75,7 +85,11 @@ export class Game {
       }
       case 'moth': th.mesh = Props.makeMoth(); th.r = 0.6; th.y = y + (e.h || 1.6); th.hx = e.x; th.hz = e.z; th.hy = th.y; th.hit = 'flame'; break;
       case 'lantern': th.mesh = Props.makeLantern(); th.r = 1.3; th.lit = false; break;
-      case 'elder': th.mesh = Props.makeElder(); th.r = 1.7; th.tip = e.tip || 'Thank you, little one!'; th.freed = false; this.state.eldersTotal++; break;
+      case 'exit': th.mesh = Props.makePortal(0x7ff0ff, 'Level exit'); th.r = 1.8; break;
+      case 'portal': th.mesh = Props.makePortal(e.color || 0xffc86b, e.label || 'Portal', e.need ? needText(e.need) : ''); th.r = 1.8; th.target = e.target; th.need = e.need; th.label = e.label; th.cool = 0; break;
+      case 'elder': th.mesh = Props.makeElder(); th.r = 1.7; th.tip = e.tip || 'Thank you, little one!'; th.freed = false; th.idx = this.elderCount++; this.state.eldersTotal++;
+        if (this.eldersFound.has(th.idx)) { th.alive = false; th.freed = true; th.t = Math.random() * 6; th.mesh.userData.crystal.visible = false; th.mesh.userData.free.visible = true; this.state.elders++; }
+        break;
     }
     th.mesh.position.set(th.x, th.y, th.z); th.mesh.rotation.y = th.ry;
     this.group.add(th.mesh); this.things.push(th);
@@ -92,6 +106,12 @@ export class Game {
       this.state.hp--; this.invuln = 1.6;
       player.knock(dx / d * force, dz / d * force, 6.5, 0.32);
     } else this.die(player);
+  }
+
+  // Fell in water / off the world: back to the last safe spot, no hit-points lost.
+  splash(player) {
+    if (this.dying > 0) return;
+    this.dying = 0.9; this.noLife = true; this.events.push({ type: 'fall' });
   }
 
   die(player) {
@@ -124,14 +144,29 @@ export class Game {
     const S = this.state;
     this.invuln = Math.max(0, this.invuln - dt);
     if (this.toastT > 0) this.toastT -= dt;
-    if (player.dead && this.dying <= 0) { this.die(player); player.dead = false; }
+    if (player.dead && this.dying <= 0) { this.splash(player); player.dead = false; }
     if (this.dying > 0) {
       this.dying -= dt;
       if (this.dying <= 0) {
-        const c = this.checkpoint;
+        const c = this.noLife ? this.safe : this.checkpoint;
         player.respawn(c.x, c.y, c.z, c.yaw); player.dead = false;
-        S.hp = Math.max(S.hp, 1); this.invuln = 2; this.events.push({ type: 'respawn' });
+        if (!this.noLife) S.hp = Math.max(S.hp, 1);
+        this.noLife = false; this.invuln = 2; this.events.push({ type: 'respawn' });
       }
+    }
+
+    // safe-spot tracking and liquid hazards
+    this.safeT -= dt;
+    const liqY = this.world.liquid ? this.world.liquid.y : -1e9;
+    if (player.onGround && this.safeT <= 0 && this.dying <= 0 && !player.groundBox) {
+      const sh = (dx, dz) => this.world.sample(player.x + dx, player.z + dz).h;
+      if (sh(0, 0) > liqY + 0.6 && sh(1.5, 0) > liqY + 0.4 && sh(-1.5, 0) > liqY + 0.4 && sh(0, 1.5) > liqY + 0.4 && sh(0, -1.5) > liqY + 0.4) {
+        this.safe = { x: player.x, y: player.y, z: player.z, yaw: player.yaw }; this.safeT = 0.5;
+      }
+    }
+    if (this.world.liquid && this.dying <= 0 && player.y < liqY - 0.15) {
+      this.events.push({ type: 'splash', x: player.x, y: liqY, z: player.z, kind: this.world.liquid.kind });
+      this.splash(player);
     }
 
     const px = player.x, py = player.y, pz = player.z;
@@ -184,6 +219,8 @@ export class Game {
           th.mesh.userData.lamp.material.color.setHex(th.lit ? (0xffd36a) : 0x6a6f8a);
           break;
         case 'elder': if (alive && dist < th.r && Math.abs(dy) < 2.2) this._rescue(th); break;
+        case 'exit': th.mesh.userData.spin(this.time); if (alive && !this.finished && dist < th.r && Math.abs(dy) < 2.5) { this.finished = true; this.events.push({ type: 'exit' }); } break;
+        case 'portal': this._updatePortal(th, dt, player, dist, dy, alive); break;
         case 'enemy': this._updateEnemy(th, dt, player, inCone, inCharge, alive); break;
       }
       if (th.kind === 'elder') this._updateElder(th, dt);
@@ -204,15 +241,26 @@ export class Game {
   }
 
   _collect(g) {
-    g.state = 0; this.state.gems += g.v;
+    g.state = 0; this.state.gems += g.v; this.collected.add(g.slot);
     this.events.push({ type: 'gem', v: g.v, x: g.x, y: g.y, z: g.z });
+  }
+
+  _updatePortal(th, dt, player, dist, dy, alive) {
+    th.mesh.userData.spin(this.time);
+    th.cool = Math.max(0, th.cool - dt);
+    if (!alive || dist > th.r || Math.abs(dy) > 2.5 || th.cool > 0) return;
+    th.cool = 1.5;
+    const need = th.need || {}, T = this.totals;
+    if ((need.elders || 0) > T.elders) { const m = need.elders - T.elders; this.toast(`Rescue ${m} more Elder${m > 1 ? 's' : ''} to open this`, 3); this.events.push({ type: 'locked' }); return; }
+    if ((need.gems || 0) > T.gems) { this.toast(`Collect ${need.gems - T.gems} more gems to open this`, 3); this.events.push({ type: 'locked' }); return; }
+    this.events.push({ type: 'portal', target: th.target });
   }
 
   _light(th) { th.lit = true; this.checkpoint = { x: th.x + Math.sin(th.ry) * 1.5, y: th.y, z: th.z + Math.cos(th.ry) * 1.5, yaw: th.ry }; this.events.push({ type: 'checkpoint' }); this.toast('Checkpoint lit!', 1.8); }
 
   _rescue(th) {
     th.alive = false; th.freed = true; th.t = 0;
-    this.state.elders++;
+    this.state.elders++; this.eldersFound.add(th.idx);
     th.mesh.userData.crystal.visible = false; th.mesh.userData.free.visible = true;
     this.events.push({ type: 'rescue', x: th.x, y: th.y + 1, z: th.z });
     this.toast(th.tip, 6);

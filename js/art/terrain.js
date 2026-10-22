@@ -43,6 +43,7 @@ export function buildTerrainMesh(world, theme) {
 export function buildBoxMeshes(world, group) {
   const meshes = [];
   for (const b of world.boxes) {
+    if (b.hidden) continue;
     const w = b.max[0] - b.min[0], h = b.max[1] - b.min[1], d = b.max[2] - b.min[2];
     const g = new THREE.BoxGeometry(w, h, d);
     const m = new THREE.Mesh(g, new THREE.MeshLambertMaterial({ color: b.color || 0x9aa3b5, flatShading: true }));

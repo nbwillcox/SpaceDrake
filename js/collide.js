@@ -19,7 +19,36 @@ export class World {
       if (b.move) { b.min0 = b.min.slice(); b.max0 = b.max.slice(); b.off = [0, 0, 0]; }
     }
     this.moving = this.boxes.filter((b) => b.move);
+    this._buildGrid();
     this.updateBoxes(0);
+    this.liquid = spec.liquid || null; // { y, kind: 'water' | 'lava' }
+  }
+
+  // Broad phase: static boxes hashed into 8 m cells; moving boxes are always candidates.
+  _buildGrid() {
+    this.gc = 8; this.grid = new Map(); this._out = []; this._stamp = 0;
+    let id = 0;
+    for (const b of this.boxes) {
+      b.id = id++; b.stamp = 0;
+      if (b.move) continue;
+      const x0 = Math.floor(b.min[0] / this.gc), x1 = Math.floor(b.max[0] / this.gc), z0 = Math.floor(b.min[2] / this.gc), z1 = Math.floor(b.max[2] / this.gc);
+      for (let cz = z0; cz <= z1; cz++) for (let cx = x0; cx <= x1; cx++) {
+        const k = cx * 4096 + cz; let a = this.grid.get(k); if (!a) { a = []; this.grid.set(k, a); } a.push(b);
+      }
+    }
+  }
+
+  // Candidate boxes near an xz rectangle (shared output array, valid until next call).
+  near(x0, z0, x1, z1) {
+    const out = this._out; out.length = 0;
+    const st = ++this._stamp, g = this.gc;
+    const cx0 = Math.floor(x0 / g), cx1 = Math.floor(x1 / g), cz0 = Math.floor(z0 / g), cz1 = Math.floor(z1 / g);
+    for (let cz = cz0; cz <= cz1; cz++) for (let cx = cx0; cx <= cx1; cx++) {
+      const a = this.grid.get(cx * 4096 + cz); if (!a) continue;
+      for (const b of a) if (b.stamp !== st) { b.stamp = st; out.push(b); }
+    }
+    for (const b of this.moving) if (b.stamp !== st) { b.stamp = st; out.push(b); }
+    return out;
   }
 
   // Advance moving boxes. b.move = { amp:[x,y,z], period (s), phase (0..1) }. Stores per-step deltas.
@@ -58,7 +87,7 @@ export class World {
     const m = margin === undefined ? 0.22 : margin;
     const t = this.sample(x, z);
     o.y = t.h; o.nx = t.nx; o.ny = t.ny; o.nz = t.nz; o.box = null;
-    for (const b of this.boxes) {
+    for (const b of this.near(x - m, z - m, x + m, z + m)) {
       const top = b.max[1];
       if (top > yRef + stepUp || top <= o.y) continue;
       if (x < b.min[0] - m || x > b.max[0] + m || z < b.min[2] - m || z > b.max[2] + m) continue;
@@ -71,7 +100,7 @@ export class World {
   // Returns number of contacts; writes the last contact normal into out.
   pushOut(p, r, h, stepUp, out) {
     let hits = 0;
-    for (const b of this.boxes) {
+    for (const b of this.near(p.x - r, p.z - r, p.x + r, p.z + r)) {
       if (b.max[1] <= p.y + stepUp || b.min[1] >= p.y + h) continue;
       const cx = clamp(p.x, b.min[0], b.max[0]), cz = clamp(p.z, b.min[2], b.max[2]);
       let dx = p.x - cx, dz = p.z - cz;
@@ -97,7 +126,7 @@ export class World {
   // Lowest box underside above the head within the xz footprint, between y0 and y1 (ceiling test).
   ceilingAt(x, z, r, y0, y1) {
     let best = Infinity;
-    for (const b of this.boxes) {
+    for (const b of this.near(x - r, z - r, x + r, z + r)) {
       const bot = b.min[1];
       if (bot < y0 || bot > y1) continue;
       if (x < b.min[0] - r * 0.5 || x > b.max[0] + r * 0.5 || z < b.min[2] - r * 0.5 || z > b.max[2] + r * 0.5) continue;
@@ -118,7 +147,7 @@ export class World {
       const x = ax + dx * t, y = ay + dy * t, z = az + dz * t;
       if (y < this.sample(x, z).h + m) { best = (i - 1) / steps; break; }
     }
-    for (const b of this.boxes) {
+    for (const b of this.near(Math.min(ax, bx) - m, Math.min(az, bz) - m, Math.max(ax, bx) + m, Math.max(az, bz) + m).slice()) {
       let t0 = 0, t1 = best;
       const mn = b.min, mx = b.max;
       const o = [ax, ay, az], d = [dx, dy, dz];

@@ -12,11 +12,18 @@ export class Hud {
       <div class="pill wick" id="h-wick"><span class="pip"></span><span class="pip"></span><span class="pip"></span></div>
       <div class="pill lives"><span class="ico heart"></span><b id="h-lives">∞</b></div>
       <div class="pill elders"><span class="ico eld"></span><b id="h-eld">0</b><small id="h-eldtot"></small></div>
-      <div id="toast"></div><div id="fade"></div><div id="prompt"></div>`;
+      <div id="banner"></div><div id="toast"></div><div id="fade"></div><div id="prompt"></div>`;
     document.body.appendChild(root);
     this.$ = (id) => document.getElementById(id);
     this.last = {};
     this.gemsEl = this.$('h-gems');
+  }
+
+  bind(game) { this.game = game; this.last = {}; }
+
+  banner(text, sub = '', ms = 2600) {
+    const b = this.$('banner'); b.innerHTML = text + (sub ? `<small>${sub}</small>` : '');
+    b.classList.add('on'); clearTimeout(this._bt); this._bt = setTimeout(() => b.classList.remove('on'), ms);
   }
 
   set(id, v) { if (this.last[id] !== v) { this.last[id] = v; this.$(id).textContent = v; return true; } return false; }

@@ -160,3 +160,21 @@ export function makeWick() {
   g.userData = { core, halo, wl, wr };
   return g;
 }
+
+// A swirling portal ring with a floating label.
+export function makePortal(color, label, sub = '') {
+  const g = new THREE.Group();
+  const ring = mesh(new THREE.TorusGeometry(1.5, 0.14, 8, 28), B(color)); ring.position.y = 1.9; g.add(ring);
+  const disc = mesh(new THREE.CircleGeometry(1.45, 28), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.35, side: THREE.DoubleSide, depthWrite: false })); disc.position.y = 1.9; g.add(disc);
+  const inner = mesh(new THREE.TorusGeometry(0.9, 0.06, 6, 20), B(0xffffff)); inner.position.y = 1.9; g.add(inner);
+  g.add(mesh(new THREE.CylinderGeometry(0.3, 0.45, 0.5, 8), M(0x5b4a78), -1.5, 0.25, 0), mesh(new THREE.CylinderGeometry(0.3, 0.45, 0.5, 8), M(0x5b4a78), 1.5, 0.25, 0));
+  const c = document.createElement('canvas'); c.width = 512; c.height = 160;
+  const x = c.getContext('2d'); x.textAlign = 'center'; x.fillStyle = '#fff'; x.shadowColor = '#000'; x.shadowBlur = 8;
+  x.font = 'bold 54px system-ui, sans-serif'; x.fillText(label, 256, 70);
+  if (sub) { x.font = '600 36px system-ui, sans-serif'; x.fillStyle = '#ffe27a'; x.fillText(sub, 256, 124); }
+  const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false }));
+  spr.scale.set(4.6, 1.44, 1); spr.position.y = 4.1; g.add(spr);
+  g.userData.spin = (t) => { ring.rotation.z = t * 0.8; inner.rotation.z = -t * 1.6; disc.material.opacity = 0.3 + Math.sin(t * 3) * 0.08; };
+  g.userData.label = spr;
+  return g;
+}

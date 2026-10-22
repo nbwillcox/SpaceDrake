@@ -1,205 +1,143 @@
 import * as THREE from 'three';
-import { World, buildHeights } from './collide.js';
-import { Player, P } from './controller.js';
 import { Input } from './input.js';
-import { FollowCam } from './camera.js';
-import { buildTerrainMesh, buildBoxMeshes } from './art/terrain.js';
-import { createDragon } from './art/dragon.js';
-import { Fx } from './art/fx.js';
-import testlab from './levels/testlab.js';
-import { Game } from './game.js';
+import { Session, STEP } from './session.js';
+import { LEVELS, START_LEVEL, HUBS } from './levels/index.js';
 import { Hud } from './hud.js';
+import { UI } from './ui.js';
+import { Save } from './save.js';
 
-const STEP = 1 / 120;
 const q = new URLSearchParams(location.search);
 const canvas = document.getElementById('c');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
 renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 1.5));
-const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(62, 1, 0.1, 400);
-
-const G = window.SD = { THREE, scene, camera, renderer, P };
 Input.init(canvas);
 
-// ---------- level
-function loadLevel(spec) {
-  const heights = buildHeights(spec.n, spec.cs, spec.height);
-  const world = new World({ n: spec.n, cs: spec.cs, heights, boxes: spec.boxes, killY: spec.killY });
-  return world;
-}
-const spec = testlab;
-const world = loadLevel(spec);
-G.world = world; G.spec = spec;
-
-const th = spec.theme;
-scene.background = new THREE.Color(th.fog);
-scene.fog = new THREE.Fog(th.fog, th.fogNear, th.fogFar);
-scene.add(new THREE.HemisphereLight(0xffffff, 0x7a8f6a, 0.85));
-const sun = new THREE.DirectionalLight(0xfff1d0, 1.0); sun.position.set(0.6, 1, 0.4); scene.add(sun);
-
-// sky dome gradient
-{
-  const g = new THREE.SphereGeometry(300, 24, 12);
-  const m = new THREE.ShaderMaterial({
-    side: THREE.BackSide, depthWrite: false, fog: false,
-    uniforms: { top: { value: new THREE.Color(th.sky[0]) }, bot: { value: new THREE.Color(th.sky[1]) } },
-    vertexShader: 'varying float h; void main(){ h = normalize(position).y; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.); }',
-    fragmentShader: 'uniform vec3 top; uniform vec3 bot; varying float h; void main(){ gl_FragColor = vec4(mix(bot, top, smoothstep(0.0, 0.7, h)), 1.); }',
-  });
-  const sky = new THREE.Mesh(g, m); sky.renderOrder = -1; scene.add(sky);
-  G.sky = sky;
-}
-
-const terrain = buildTerrainMesh(world, th); scene.add(terrain);
-const boxGroup = new THREE.Group(); scene.add(boxGroup); buildBoxMeshes(world, boxGroup);
-
-// ---------- player
-const sp = spec.spawn;
-sp[1] = world.sample(sp[0], sp[2]).h + 0.2;
-const player = new Player(world, sp[0], sp[1], sp[2], sp[3]);
-G.player = player;
-const dragon = createDragon(); scene.add(dragon.root);
-const fx = new Fx(scene); G.fx = fx;
-const shadow = new THREE.Mesh(new THREE.CircleGeometry(0.5, 20), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.35, depthWrite: false }));
-shadow.rotation.x = -Math.PI / 2; scene.add(shadow);
-
-const game = new Game({ scene, world, spec, settings: { cozy: true } }); G.game = game;
-const hud = new Hud(game);
-const cam = new FollowCam(camera); G.cam = cam;
-cam.snapTo(sp[3]);
-
-// ---------- loop
-const pending = { jumpPressed: false, flamePressed: false, chargePressed: false };
-let acc = 0, last = performance.now(), paused = false, t = 0;
+const hud = new Hud(null);
 const dbg = document.getElementById('dbg');
 let showDbg = q.has('dbg');
-G.paused = false;
 
-function simStep(inp) {
-  // camera-relative move vector
-  const yaw = cam.fp ? 0 : cam.yaw;
-  const fx_ = Math.sin(yaw), fz_ = Math.cos(yaw);
-  const rx = -Math.cos(yaw), rz = Math.sin(yaw);
-  const mv = inp.my, mr = inp.mx;
-  const move = { mx: fx_ * mv + rx * mr, mz: fz_ * mv + rz * mr,
-    jumpPressed: pending.jumpPressed, jumpHeld: inp.jumpHeld,
-    flamePressed: pending.flamePressed, chargePressed: pending.chargePressed, frozen: inp.lookHeld || game.dying > 0 };
-  pending.jumpPressed = pending.flamePressed = pending.chargePressed = false;
-  world.updateBoxes(STEP);
-  const prevYaw = player.yaw;
-  player.step(STEP, move);
-  player.yawRate = Math.atan2(Math.sin(player.yaw - prevYaw), Math.cos(player.yaw - prevYaw)) / STEP;
-  for (const e of player.events) onEvent(e);
-  game.update(STEP, player);
-  for (const e of game.events) onGameEvent(e);
-  game.events.length = 0;
-  if (player.flameT > 0) {
-    const nx = Math.sin(player.yaw), nz = Math.cos(player.yaw);
-    fx.flame(player.x + nx * 0.8, player.y + 0.62, player.z + nz * 0.8, nx, nz);
-  }
-  if (game.respawned) { game.respawned = false; cam.snapTo(game.checkpoint.yaw); }
-  t += STEP;
-}
+const App = window.SD = {
+  THREE, renderer, camera, hud, UI, Save, Input,
+  session: null, paused: false, camLocked: false, busy: false,
+  sfx: null,
 
-function onEvent(e) {
-  switch (e.type) {
-    case 'jump': dragon.pulse('jump'); fx.dust(player.x, player.y, player.z, 4, 0.8); Input.rumble(0.1, 0.2, 50); break;
-    case 'land': dragon.pulse('land'); fx.dust(player.x, player.y, player.z, Math.min(10, 4 + (e.impact | 0)), 1 + e.impact * 0.05); Input.rumble(Math.min(0.6, e.impact * 0.03), 0.3, 80); break;
-    case 'charge': fx.dust(player.x, player.y, player.z, 8, 1.3); Input.rumble(0.3, 0.6, 120); break;
-    case 'bump': fx.sparkle(player.x + Math.sin(player.yaw) * 0.6, player.y + 0.5, player.z + Math.cos(player.yaw) * 0.6, 12, 1, 0.9, 0.4); Input.rumble(0.8, 0.8, 160); break;
-    case 'flame': Input.rumble(0.0, 0.4, 150); break;
-  }
-}
+  async goto(id, opts = {}) {
+    if (App.busy) return;
+    App.busy = true;
+    await UI.transition(() => {
+      UI.close();
+      if (App.session) { App.session.dispose(); App.session = null; }
+      App.session = new Session(App, id, opts);
+      hud.bind(App.session.game);
+      App.paused = false;
+      const s = App.session.spec;
+      hud.banner(s.name, App.worldName(s), 2800);
+    });
+    App.busy = false;
+  },
 
-function onGameEvent(e) {
-  switch (e.type) {
-    case 'gem': fx.sparkle(e.x, e.y, e.z, 4, ...(e.v >= 10 ? [1, 0.8, 0.3] : e.v >= 5 ? [0.4, 0.7, 1] : e.v >= 2 ? [0.4, 1, 0.55] : [1, 0.4, 0.5])); Input.rumble(0.05, 0.12, 40); break;
-    case 'break': fx.dust(e.x, e.y - 0.3, e.z, 10, 1.5); fx.sparkle(e.x, e.y, e.z, 6, 1, 0.7, 0.3); Input.rumble(0.3, 0.3, 70); break;
-    case 'kill': fx.sparkle(e.x, e.y, e.z, 14, 1, 0.55, 0.25); fx.dust(e.x, e.y - 0.4, e.z, 6, 1.2); Input.rumble(0.4, 0.5, 100); break;
-    case 'hurt': fx.sparkle(player.x, player.y + 0.6, player.z, 10, 1, 0.3, 0.3); Input.rumble(0.9, 0.9, 220); break;
-    case 'heal': fx.sparkle(player.x, player.y + 1.2, player.z, 12, 1, 0.9, 0.4); break;
-    case 'moth': fx.sparkle(e.x, e.y, e.z, 10, 0.5, 1, 1); break;
-    case 'rescue': fx.sparkle(e.x, e.y, e.z, 40, 0.5, 0.95, 1); fx.sparkle(e.x, e.y, e.z, 20, 1, 0.85, 0.4); Input.rumble(0.5, 0.8, 300); break;
-    case 'checkpoint': fx.sparkle(player.x, player.y + 1, player.z, 16, 1, 0.85, 0.4); break;
-    case 'zap': fx.sparkle(e.x, e.y, e.z, 5, 1, 0.4, 0.7); break;
-    case 'clink': fx.sparkle(e.x, e.y, e.z, 5, 0.9, 0.9, 1); break;
-    case 'hit': fx.sparkle(e.x, e.y, e.z, 8, 1, 0.8, 0.3); break;
-    case 'respawn': game.respawned = true; break;
-  }
-}
+  worldName(spec) { return ({ mossgate: 'Mossgate Meadows', brightforge: 'Brightforge Vale', mistral: 'Mistral Heights', glimmerdeep: 'Glimmerdeep', duskmarket: 'Duskmarket', keep: "Gloam's Keep" })[spec.world] || ''; },
 
+  hubFor(spec) { return HUBS[spec.world]; },
+
+  // Level exit reached: save, show results, return to the hub.
+  onExit(session) {
+    session.commit(true);
+    const S = session.game.state;
+    const node = UI.el('div');
+    const row = (k, v, n, full) => `<span class="k">${k}</span><span class="v ${full ? 'full' : ''}">${v}</span><span class="n">${n}</span>`;
+    const t = Math.round(session.time), mm = String(Math.floor(t / 60)), ss = String(t % 60).padStart(2, '0');
+    node.innerHTML = `<h1>${session.spec.name} complete!</h1><p class="sub">${App.worldName(session.spec)}</p>
+      <div class="stats">${row('Gems', S.gems, '/ ' + S.gemsTotal, S.gems >= S.gemsTotal)}${row('Elders rescued', S.elders, '/ ' + S.eldersTotal, S.elders >= S.eldersTotal)}${row('Time', mm + ':' + ss, '')}</div>
+      <p class="hint">Press A / Enter to continue</p>`;
+    const go = () => { UI.close(); App.leave(session); };
+    UI.custom(node, go, go);
+  },
+
+  leave(session) {
+    const hub = App.hubFor(session.spec);
+    if (hub && LEVELS[hub]) App.goto(hub, { fromLevel: session.id });
+    else App.goto(session.id);
+  },
+
+  onPortal(session, target) {
+    if (!LEVELS[target]) { session.game.toast('Coming soon!', 2.5); return; }
+    session.commit(false);
+    App.goto(target, { fromLevel: session.id });
+  },
+
+  pause() {
+    const s = App.session; if (!s || App.busy) return;
+    App.paused = true;
+    const hub = App.hubFor(s.spec);
+    const items = [
+      { label: 'Resume', action: () => App.resume() },
+      { label: 'Restart level', action: () => { UI.close(); App.paused = false; App.goto(s.id); } },
+    ];
+    if (hub && hub !== s.id) items.push({ label: 'Leave level', sub: 'Gems and Elders you found are kept', action: () => { s.commit(false); UI.close(); App.paused = false; App.goto(hub, { fromLevel: s.id }); } });
+    UI.menu({ title: 'Paused', subtitle: s.spec.name, items, onBack: () => App.resume() });
+  },
+  resume() { UI.close(); App.paused = false; },
+};
+
+// ---------- main loop
+let last = performance.now();
 function frame(now) {
   requestAnimationFrame(frame);
   const dt = Math.min(0.1, (now - last) / 1000); last = now;
-  if (!G.paused) advance(dt);
-  render(dt, acc / STEP);
-}
-
-function advance(dt) {
   const inp = Input.poll();
-  if (inp.pausePressed) { /* pause menu arrives in M6 */ }
-  if (inp.flamePressed) pending.flamePressed = true;
-  if (inp.jumpPressed) pending.jumpPressed = true;
-  if (inp.chargePressed) pending.chargePressed = true;
-  acc += dt;
-  let n = 0;
-  while (acc >= STEP && n++ < 12) { simStep(inp); acc -= STEP; }
-  if (n >= 12) acc = 0;
-  G.inp = inp;
-}
-
-function render(dt, alpha) {
-  const lerp = (a, b) => a + (b - a) * alpha;
-  const rx = lerp(player.px, player.x), ry = lerp(player.py, player.y), rz = lerp(player.pz, player.z);
-  let dy = player.yaw - player.pyaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy));
-  const ryaw = player.pyaw + dy * alpha;
-  dragon.root.position.set(rx, ry, rz);
-  dragon.root.rotation.y = ryaw;
-  dragon.update(dt, {
-    vx: player.vx, vy: player.vy, vz: player.vz, onGround: player.onGround, sliding: player.sliding,
-    gliding: player.gliding, charging: player.charging, flaming: player.flameT > 0, yawRate: player.yawRate || 0,
-  });
-  const gnd = world.groundAt(rx, rz, ry + 0.5, 0.6, G._gg || (G._gg = {}));
-  shadow.position.set(rx, gnd.y + 0.04, rz);
-  const hh = Math.max(0, ry - gnd.y);
-  shadow.scale.setScalar(Math.max(0.35, 1 - hh * 0.06));
-  shadow.material.opacity = Math.max(0.1, 0.38 - hh * 0.02);
-
-  for (const b of world.moving) b.mesh.position.set((b.min[0] + b.max[0]) / 2, (b.min[1] + b.max[1]) / 2, (b.min[2] + b.max[2]) / 2);
-  const inp = G.inp || Input.state;
-  cam.update(dt, { x: rx, y: ry, z: rz, yaw: ryaw, vx: player.vx, vz: player.vz, onGround: player.onGround }, inp, world);
-  fx.update(dt);
-  game.render();
-  hud.update();
-
-  const w = canvas.clientWidth, h = canvas.clientHeight;
-  if (canvas.width !== Math.floor(w * renderer.getPixelRatio()) || canvas.height !== Math.floor(h * renderer.getPixelRatio())) {
-    renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
+  const s = App.session;
+  if (UI.active()) UI.update(inp);
+  else if (s && !App.busy && inp.pausePressed) App.pause();
+  if (s) {
+    if (!App.paused && !UI.active() && !App.busy) s.advance(dt, inp);
+    else s.acc = 0;
+    s.render(dt, s.acc / STEP);
+    hud.update();
+    resize();
+    renderer.render(s.scene, camera);
   }
-  G.sky.position.copy(camera.position);
-  renderer.render(scene, camera);
   if (showDbg) updateDbg();
 }
 
+function resize() {
+  const w = canvas.clientWidth, h = canvas.clientHeight, pr = renderer.getPixelRatio();
+  if (canvas.width !== Math.floor(w * pr) || canvas.height !== Math.floor(h * pr)) { renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); }
+}
+
 function updateDbg() {
-  const s = Input.state;
+  const s = Input.state, p = App.session && App.session.player;
   dbg.textContent =
     `pad: ${s.padName || 'none'}${s.usingPad ? ' (active)' : ''}\n` +
     `move ${s.mx.toFixed(2)},${s.my.toFixed(2)}  cam ${s.csx.toFixed(2)},${s.csy.toFixed(2)}\n` +
     `btn ${s.buttons.join('')}\naxes ${s.axes.map((a) => a.toFixed(2)).join(' ')}\n` +
-    `pos ${player.x.toFixed(1)},${player.y.toFixed(1)},${player.z.toFixed(1)} spd ${player.speedH.toFixed(1)} vy ${player.vy.toFixed(1)}\n` +
-    `${player.onGround ? 'GROUND ' : ''}${player.gliding ? 'GLIDE ' : ''}${player.charging ? 'CHARGE ' : ''}${player.sliding ? 'SLIDE ' : ''}`;
+    (p ? `pos ${p.x.toFixed(1)},${p.y.toFixed(1)},${p.z.toFixed(1)} spd ${p.speedH.toFixed(1)} vy ${p.vy.toFixed(1)}\n${p.onGround ? 'GROUND ' : ''}${p.gliding ? 'GLIDE ' : ''}${p.charging ? 'CHARGE ' : ''}${p.sliding ? 'SLIDE ' : ''}` : '');
 }
-
-addEventListener('keydown', (e) => {
-  if (e.code === 'F3') { showDbg = !showDbg; dbg.style.display = showDbg ? 'block' : 'none'; }
-});
+addEventListener('keydown', (e) => { if (e.code === 'F3') { showDbg = !showDbg; dbg.style.display = showDbg ? 'block' : 'none'; } });
 dbg.style.display = showDbg ? 'block' : 'none';
 
-G.step = (n = 1, inp = {}) => { // headless stepping for tests: SD.step(120, {my:1})
-  const base = { mx: 0, my: 0, jumpHeld: false, lookHeld: false };
-  for (let i = 0; i < n; i++) { Object.assign(pending, { jumpPressed: !!(inp.jumpPressed && i === 0), flamePressed: !!(inp.flamePressed && i === 0), chargePressed: !!(inp.chargePressed && i === 0) }); simStep(Object.assign(base, inp)); }
-  acc = 0; render(STEP, 1);
+// headless stepping for tests: SD.step(120, {my:1})
+App.step = (n = 1, inp = {}) => {
+  const s = App.session; const base = { mx: 0, my: 0, jumpHeld: false, lookHeld: false };
+  for (let i = 0; i < n; i++) {
+    Object.assign(s.pending, { jumpPressed: !!(inp.jumpPressed && i === 0), flamePressed: !!(inp.flamePressed && i === 0), chargePressed: !!(inp.chargePressed && i === 0) });
+    s.simStep(Object.assign(base, inp));
+  }
+  s.acc = 0; s.lastInp = Object.assign({ csx: 0, csy: 0, cdx: 0, cdy: 0 }, base, inp); s.render(STEP, 1); hud.update(); resize(); renderer.render(s.scene, camera);
 };
-requestAnimationFrame((n) => { last = n; frame(n); });
+
+// ---------- boot
+function boot() {
+  const used = Save.slots().findIndex((x) => x);
+  Save.start(used >= 0 ? used : 0);
+  const id = q.get('level') || START_LEVEL;
+  UI.cover(true);
+  App.session = new Session(App, id);
+  hud.bind(App.session.game);
+  hud.banner(App.session.spec.name, App.worldName(App.session.spec));
+  UI.cover(false);
+  requestAnimationFrame((n) => { last = n; frame(n); });
+}
 document.getElementById('hint').addEventListener('click', () => canvas.requestPointerLock && canvas.requestPointerLock());
+boot();

@@ -12,11 +12,11 @@ export class FollowCam {
     this.cam = camera;
     this.yaw = 0; this.pitch = 0.38; this.dist = 6.2; this.curDist = 6.2;
     this.idle = 0; this.target = new THREE.Vector3(); this.fp = false;
-    this.fpYaw = 0; this.fpPitch = 0;
+    this.fpYaw = 0; this.fpPitch = 0; this.first = true;
     this._pos = new THREE.Vector3();
   }
 
-  snapTo(yaw) { this.yaw = yaw; this.pitch = 0.38; this.curDist = this.dist; this.idle = 0; }
+  snapTo(yaw) { this.yaw = yaw; this.pitch = 0.38; this.curDist = this.dist; this.idle = 0; this.first = true; }
 
   // p: { x,y,z, yaw, vx, vz, speedH, onGround }
   update(dt, p, inp, world) {
@@ -60,6 +60,7 @@ export class FollowCam {
 
     // target follows with a little vertical smoothing
     const ty = p.y + 0.9;
+    if (this.first) { this.target.set(p.x, ty, p.z); this.first = false; }
     this.target.x = p.x; this.target.z = p.z;
     this.target.y += (ty - this.target.y) * (1 - Math.exp(-(p.onGround ? 7 : 4) * dt));
     if (Math.abs(this.target.y - ty) > 5) this.target.y = ty;
