@@ -397,29 +397,64 @@ export function makeBarrier(w, h, d, by) {
     }
     return g;
   }
-  const stones = [M(0x8e8480), M(0x9a908a), M(0x7f7672), M(0xa39a92)], mortar = M(0x5a524c);
+  // ---- cracked stone wall: a fissure runs top to bottom with branches. Blocks along it are heaved out of line, the
+  // top edge is broken, and a hot glow shows through the gap. Rubble piles up at the foot.
+  const stones = [M(0x8e8480), M(0x9a908a), M(0x7f7672), M(0xa39a92)], mortar = M(0x4a423c), hot = new THREE.MeshBasicMaterial({ color: 0xff8a2a });
   const rows = Math.max(3, Math.round(h / 0.85)), rh = h / rows;
-  root.add(mesh(new THREE.BoxGeometry(span, h, thick * 0.7), mortar, 0, h / 2, 0));
+  // crack polyline (x,y in wall space), main fissure plus two branches
+  const main = []; { let cx = -0.55; const n = 9; for (let i = 0; i <= n; i++) { const y = h * (0.97 - 0.94 * (i / n)); main.push([cx, y]); cx += Math.sin(i * 2.1 + 1.3) * 0.32 + 0.1; } }
+  const br1 = [main[2], [main[2][0] - 0.55, main[2][1] - 0.25], [main[2][0] - 1.05, main[2][1] - 0.7], [main[2][0] - 1.35, main[2][1] - 1.25]];
+  const br2 = [main[5], [main[5][0] + 0.5, main[5][1] - 0.2], [main[5][0] + 0.95, main[5][1] - 0.62], [main[5][0] + 1.4, main[5][1] - 0.7]];
+  const dseg = (px, py, ax, ay, bx, by) => { const dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy || 1, t = Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / l2)); return Math.hypot(px - (ax + dx * t), py - (ay + dy * t)); };
+  const distCrack = (px, py) => { let d = 9; for (const pl of [main, br1, br2]) for (let i = 0; i < pl.length - 1; i++) d = Math.min(d, dseg(px, py, pl[i][0], pl[i][1], pl[i + 1][0], pl[i + 1][1])); return d; };
+  // hot core visible through the gaps
+  root.add(mesh(new THREE.BoxGeometry(span, h, thick * 0.55), mortar, 0, h / 2, 0));
+  root.add(mesh(new THREE.BoxGeometry(span * 0.5, h * 0.92, thick * 0.3), hot, -0.3, h / 2, 0));
   for (let r = 0; r < rows; r++) {
     let x = -span / 2 + (r % 2 ? 0.45 : 0), i = 0;
     while (x < span / 2 - 0.05) {
       const bw = Math.min(span / 2 - x, 0.85 + 0.55 * Math.abs(Math.sin(r * 5.1 + i * 2.3))), hh = rh - 0.06 - 0.05 * Math.abs(Math.cos(i + r));
-      const b = mesh(new THREE.BoxGeometry(bw - 0.05, hh, thick * (0.9 + 0.12 * Math.sin(i * 3 + r))), stones[(i + r) % 4], x + bw / 2, r * rh + rh / 2, 0);
-      b.rotation.y = Math.sin(i * 7 + r) * 0.03; b.rotation.z = Math.sin(i * 4 + r * 2) * 0.02; root.add(b);
+      const cx = x + bw / 2, cy = r * rh + rh / 2, dc = distCrack(cx, cy);
       x += bw; i++;
+      // ragged top: the top row loses a few blocks near the fissure
+      if (r === rows - 1 && dc < 0.75 && (i + r) % 2 === 0) continue;
+      const g0 = jit(new THREE.BoxGeometry(bw - 0.06, hh, thick * (0.9 + 0.12 * Math.sin(i * 3 + r))), 0.07, i + r * 11);
+      const b = mesh(g0, stones[(i + r) % 4], cx, cy, 0);
+      b.rotation.y = Math.sin(i * 7 + r) * 0.03; b.rotation.z = Math.sin(i * 4 + r * 2) * 0.02;
+      if (dc < 0.65) { // heaved out of line, tilted, a little loose
+        const side = Math.sin(i * 5.3 + r) > 0 ? 1 : -1, k = 1 - dc / 0.65;
+        b.position.z += side * (0.06 + 0.12 * k); b.position.x += Math.sin(i + r * 3) * 0.05; b.rotation.z += Math.sin(i * 3 + r) * 0.1 * k; b.rotation.y += side * 0.06 * k;
+        b.material = stones[(i + r + 2) % 4];
+      }
+      root.add(b);
     }
   }
-  // glowing crack zig-zag across the middle, front and back: "charge here"
-  const crack = new THREE.MeshBasicMaterial({ color: 0xffa34a });
-  for (const z of [thick * 0.5 + 0.02, -thick * 0.5 - 0.02]) {
-    let px = -0.3, py = h * 0.15;
-    for (let i = 0; i < 7; i++) {
-      const nx = px + (i % 2 ? -0.28 : 0.3), ny = py + h * 0.11;
-      const seg = mesh(new THREE.BoxGeometry(0.06, Math.hypot(nx - px, ny - py) + 0.04, 0.03), crack, (px + nx) / 2, (py + ny) / 2, z);
-      seg.rotation.z = Math.atan2(nx - px, ny - py) * -1; root.add(seg); px = nx; py = ny;
+  // the fissure itself, on both faces: dark gash with a glowing seam and chipped bits beside it
+  const gash = M(0x1a1410), splint = M(0x2a221c);
+  for (const side of [1, -1]) {
+    const z = side * (thick * 0.5 + 0.05);
+    for (const [pl, wd] of [[main, 0.15], [br1, 0.1], [br2, 0.1]]) {
+      for (let i = 0; i < pl.length - 1; i++) {
+        const [ax, ay] = pl[i], [bx, by] = pl[i + 1], len = Math.hypot(bx - ax, by - ay), ang = -Math.atan2(bx - ax, by - ay), t = 1 - i / pl.length * 0.5;
+        const dk = mesh(new THREE.BoxGeometry(wd * t, len + 0.06, 0.05), gash, (ax + bx) / 2, (ay + by) / 2, z); dk.rotation.z = ang; root.add(dk);
+        const gl = mesh(new THREE.BoxGeometry(wd * t * 0.38, len + 0.03, 0.05), hot, (ax + bx) / 2, (ay + by) / 2, z + side * 0.012); gl.rotation.z = ang; root.add(gl);
+        if (i % 2 === 0) { const ch = mesh(jit(new THREE.IcosahedronGeometry(0.1, 0), 0.05, i), splint, (ax + bx) / 2 + (i % 4 ? 0.16 : -0.14), (ay + by) / 2 - 0.05, z + side * 0.03); ch.scale.set(1, 0.8, 0.5); root.add(ch); }
+      }
+    }
+    // hairline cracks across a few neighbouring blocks
+    for (let k = 0; k < 5; k++) {
+      const hx = main[1 + k][0] + (k % 2 ? 0.75 : -0.7), hy = main[1 + k][1];
+      const sg = mesh(new THREE.BoxGeometry(0.035, 0.42, 0.03), gash, hx, hy, z - side * 0.02); sg.rotation.z = (k % 2 ? 0.5 : -0.5) + k * 0.2; root.add(sg);
     }
   }
-  root.add(mesh(new THREE.BoxGeometry(span + 0.3, 0.22, thick + 0.2), mortar, 0, h + 0.05, 0));
+  // rubble and fallen blocks at the foot, both sides
+  for (let i = 0; i < 12; i++) {
+    const a = (i / 12) * 6.28, front = i % 2 ? 1 : -1, x = -1.4 + (i / 11) * 3.0 + Math.sin(i * 3.7) * 0.4, rr = 0.1 + 0.16 * Math.abs(Math.sin(i * 2.9));
+    const r = mesh(jit(new THREE.IcosahedronGeometry(rr, 0), rr * 0.8, i), stones[i % 4], x, rr * 0.55, front * (thick * 0.5 + 0.3 + 0.35 * Math.abs(Math.sin(i * 1.9))));
+    r.scale.set(1.2, 0.7, 1); r.rotation.y = a; root.add(r);
+  }
+  for (const [x, side] of [[-1.7, 1], [1.3, -1]]) { const fb = mesh(jit(new THREE.BoxGeometry(0.7, 0.4, 0.5), 0.07, 90), stones[1], x, 0.2, side * (thick * 0.5 + 0.55)); fb.rotation.y = 0.5 * side; fb.rotation.z = 0.12; root.add(fb); }
+  root.add(mesh(new THREE.BoxGeometry(span + 0.2, 0.18, thick + 0.12), mortar, 0, 0.04, 0));
   return g;
 }
 
