@@ -76,68 +76,7 @@ export function makeElder() {
   return g;
 }
 
-function eyes(parent, y, z, s = 1) {
-  for (const x of [-1, 1]) {
-    parent.add(mesh(new THREE.SphereGeometry(0.1 * s, 8, 6), B(0xffffff), 0.14 * x * s, y, z));
-    parent.add(mesh(new THREE.SphereGeometry(0.055 * s, 6, 5), B(0x15101f), 0.15 * x * s, y, z + 0.07 * s));
-  }
-}
-
-export function makeEnemy(kind) {
-  const g = new THREE.Group();
-  const body = new THREE.Group(); g.add(body);
-  g.userData.body = body;
-  if (kind === 'stroller') {
-    const b = mesh(ico(0.42, 1), M(0xd8643a), 0, 0.5, 0); b.scale.set(1, 0.9, 1.1); body.add(b);
-    eyes(body, 0.62, 0.34);
-    body.add(mesh(new THREE.ConeGeometry(0.09, 0.2, 5), M(0xf1d9a0), 0.2, 0.95, 0), mesh(new THREE.ConeGeometry(0.09, 0.2, 5), M(0xf1d9a0), -0.2, 0.95, 0));
-    g.userData.legs = [mesh(ico(0.1), M(0x7a3a20), 0.2, 0.1, 0.1), mesh(ico(0.1), M(0x7a3a20), -0.2, 0.1, 0.1)];
-    g.userData.legs.forEach((l) => g.add(l));
-  } else if (kind === 'shield') {
-    const b = mesh(ico(0.42, 1), M(0x6f5fd0), 0, 0.5, 0); b.scale.set(1, 0.9, 1.1); body.add(b);
-    eyes(body, 0.62, 0.34);
-    const sh = mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.1, 10).rotateX(Math.PI / 2), M(0xb8c4d8), 0, 0.55, 0.52); body.add(sh);
-    sh.add(mesh(ico(0.14), M(0xffd23e), 0, 0, 0.08));
-    g.userData.legs = [mesh(ico(0.1), M(0x362c6a), 0.2, 0.1, 0.1), mesh(ico(0.1), M(0x362c6a), -0.2, 0.1, 0.1)];
-    g.userData.legs.forEach((l) => g.add(l));
-  } else if (kind === 'spiked') {
-    const b = mesh(ico(0.42, 1), M(0xb44fd0), 0, 0.5, 0); b.scale.set(1, 0.9, 1.1); body.add(b);
-    eyes(body, 0.62, 0.34);
-    for (let i = 0; i < 7; i++) {
-      const a = (i / 7) * 5 - 2.5, sp = mesh(new THREE.ConeGeometry(0.1, 0.38, 5), M(0xf7e36b), Math.sin(a) * 0.34, 0.85 + Math.cos(a) * 0.12, -0.12 - Math.abs(a) * 0.04);
-      sp.rotation.z = -a * 0.5; sp.rotation.x = -0.3; body.add(sp);
-    }
-    g.userData.legs = [mesh(ico(0.1), M(0x5c2470), 0.2, 0.1, 0.1), mesh(ico(0.1), M(0x5c2470), -0.2, 0.1, 0.1)];
-    g.userData.legs.forEach((l) => g.add(l));
-  } else if (kind === 'hopper') {
-    const b = mesh(ico(0.38, 1), M(0x4fcf5a), 0, 0.4, 0); b.scale.set(1.1, 0.85, 1.2); body.add(b);
-    for (const x of [-1, 1]) { body.add(mesh(new THREE.SphereGeometry(0.13, 8, 6), B(0xffffff), 0.2 * x, 0.72, 0.18)); body.add(mesh(new THREE.SphereGeometry(0.07, 6, 5), B(0x15101f), 0.2 * x, 0.74, 0.28)); }
-    body.add(mesh(ico(0.16), M(0xff6f8e), 0, 0.4, 0.42));
-  } else if (kind === 'spitter') {
-    g.add(mesh(new THREE.CylinderGeometry(0.1, 0.16, 0.9, 6), M(0x2b8f4d), 0, 0.45, 0));
-    const head = new THREE.Group(); head.position.y = 1.0; body.add(head);
-    head.add(mesh(ico(0.3, 1), M(0xe0408f)));
-    head.add(mesh(new THREE.CylinderGeometry(0.1, 0.16, 0.3, 6).rotateX(Math.PI / 2), M(0x7a1f4a), 0, 0, 0.3));
-    eyes(head, 0.1, 0.22, 0.9);
-    g.userData.head = head;
-  } else if (kind === 'thief') {
-    const b = mesh(ico(0.3, 1), M(0x7d8fb5), 0, 0.42, 0); b.scale.set(1, 0.9, 1.15); body.add(b);
-    body.add(mesh(new THREE.BoxGeometry(0.62, 0.14, 0.4), M(0x1b1730), 0, 0.55, 0.22));
-    eyes(body, 0.56, 0.36, 0.8);
-    body.add(mesh(new THREE.ConeGeometry(0.07, 0.22, 4), M(0x7d8fb5), 0.14, 0.82, 0), mesh(new THREE.ConeGeometry(0.07, 0.22, 4), M(0x7d8fb5), -0.14, 0.82, 0));
-    const sack = mesh(ico(0.26, 1), M(0xc9a55c), 0, 0.55, -0.34); body.add(sack);
-    body.add(mesh(ico(0.12, 0), B(0xffd23e), 0, 0.72, -0.34));
-    g.userData.legs = [mesh(ico(0.09), M(0x3f4a66), 0.15, 0.09, 0.1), mesh(ico(0.09), M(0x3f4a66), -0.15, 0.09, 0.1)];
-    g.userData.legs.forEach((l) => g.add(l));
-  } else if (kind === 'brute') {
-    const b = mesh(ico(0.8, 1), M(0x7a5a4a), 0, 0.85, 0); b.scale.set(1.05, 0.95, 1.1); body.add(b);
-    eyes(body, 1.05, 0.62, 1.7);
-    body.add(mesh(new THREE.ConeGeometry(0.16, 0.5, 5), M(0xe8d6a8), 0.38, 1.6, 0), mesh(new THREE.ConeGeometry(0.16, 0.5, 5), M(0xe8d6a8), -0.38, 1.6, 0));
-    g.userData.legs = [mesh(ico(0.2), M(0x3f2c22), 0.4, 0.18, 0.1), mesh(ico(0.2), M(0x3f2c22), -0.4, 0.18, 0.1)];
-    g.userData.legs.forEach((l) => g.add(l));
-  }
-  return g;
-}
+export { makeEnemy } from './enemies.js';
 
 export function makeMoth() {
   const g = new THREE.Group();
