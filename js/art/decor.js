@@ -88,16 +88,17 @@ const KINDS = {
       { g: cyl(0.55, 0.45, 0.3, 8), c: p.stone || 0xb9b6c8, m: T(0, 3.15, 0) },
     ]);
   },
+  // Ambient globe lamp: shorter, round frosted globe on a curved neck. Deliberately NOT the checkpoint pole (those have a roof and cage).
   lamppost(p) {
     return merge([
-      { g: cyl(0.2, 0.28, 0.3, 8), c: p.stone || 0x6c6480, m: T(0, 0.15, 0) },
-      { g: cyl(0.05, 0.07, 2.3, 6), c: 0x2e2a3c, m: T(0, 1.4, 0) },
-      { g: cyl(0.2, 0.16, 0.08, 6), c: 0x2e2a3c, m: T(0, 2.45, 0) },
-      { g: cyl(0.21, 0.17, 0.42, 6), c: p.lamp || 0xffd36a, m: T(0, 2.7, 0) },
-      { g: cone(0.3, 0.26, 6), c: 0x3b3052, m: T(0, 3.05, 0) },
-      { g: ico(0.05, 0), c: 0xffd36a, m: T(0, 3.22, 0) },
+      { g: cyl(0.14, 0.2, 0.2, 7), c: 0x4a4258, m: T(0, 0.1, 0) },
+      { g: cyl(0.04, 0.055, 1.7, 6), c: 0x5a4a3a, m: T(0, 1.05, 0) },
+      { g: cyl(0.035, 0.035, 0.5, 5), c: 0x5a4a3a, m: T(0.2, 1.88, 0).multiply(new THREE.Matrix4().makeRotationZ(-1.0)) },
+      { g: cyl(0.1, 0.07, 0.1, 6), c: 0xc08a3a, m: T(0.4, 2.0, 0) },
+      { g: ico(0.24, 1), c: p.lamp || 0xfff1b8, m: T(0.4, 2.26, 0) },
     ]);
   },
+
 
 };
 

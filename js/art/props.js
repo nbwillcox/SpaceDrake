@@ -137,11 +137,12 @@ export function makeLantern() {
   cage.add(mesh(new THREE.ConeGeometry(0.34, 0.26, 6), roof, 0, 0.38, 0), mesh(new THREE.TorusGeometry(0.28, 0.03, 4, 6).rotateX(Math.PI / 2), gold, 0, 0.27, 0), mesh(ico(0.06, 0), gold, 0, 0.56, 0));
   const halo = glowSprite(0xffc860, 2.2, 0); halo.position.y = 2.2; g.add(halo);
   const hint = glowSprite(0x9ab4ff, 0.9, 0.3); hint.position.y = 2.2; g.add(hint);
+  const beam = mesh(new THREE.CylinderGeometry(0.1, 0.18, 3.4, 8, 1, true), new THREE.MeshBasicMaterial({ color: 0x9ab4ff, transparent: true, opacity: 0.2, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }), 0, 4.1, 0); g.add(beam);
   const pool = mesh(new THREE.CircleGeometry(2.4, 24).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xffc860, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }), 0, 0.07, 0); g.add(pool);
   g.userData.lamp = flame;
-  g.userData.setLit = (on) => { glassMat.color.setHex(on ? 0xffe9a8 : 0x5a6a90); glassMat.opacity = on ? 0.35 : 0.55; flameMat.color.setHex(on ? 0xfff0b0 : 0x7a86b0); hint.visible = !on; };
+  g.userData.setLit = (on) => { glassMat.color.setHex(on ? 0xffe9a8 : 0x5a6a90); glassMat.opacity = on ? 0.35 : 0.55; flameMat.color.setHex(on ? 0xfff0b0 : 0x7a86b0); hint.visible = !on; beam.visible = !on; };
   g.userData.tick = (t, lit, seed = 0) => {
-    if (!lit) { const p = 0.5 + Math.sin(t * 2 + seed) * 0.5; hint.material.opacity = 0.12 + p * 0.28; hint.scale.setScalar(0.8 + p * 0.3); halo.material.opacity = 0; pool.material.opacity = 0; return; }
+    if (!lit) { const p = 0.5 + Math.sin(t * 2 + seed) * 0.5; hint.material.opacity = 0.12 + p * 0.28; hint.scale.setScalar(0.8 + p * 0.3); beam.material.opacity = 0.1 + p * 0.16; halo.material.opacity = 0; pool.material.opacity = 0; return; }
     const f = 1 + Math.sin(t * 13 + seed) * 0.08 + Math.sin(t * 7.3 + seed) * 0.06;
     flame.scale.set(f, 0.9 + (f - 1) * 3, f);
     halo.material.opacity = 0.7 + Math.sin(t * 9 + seed) * 0.08; halo.scale.setScalar(2.3 * f);
