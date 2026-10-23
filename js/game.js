@@ -261,7 +261,7 @@ export class Game {
       const dx = th.x - px, dz = th.z - pz, dy = th.y - py;
       const dist = Math.hypot(dx, dz);
       const fwd = dx * fxd + dz * fzd, lat = dx * fzd - dz * fxd;
-      const inCone = flaming && fwd > -0.2 && fwd < 3.0 && Math.abs(lat) < fwd * 0.65 + 0.7 && Math.abs(dy) < 1.8 && !(th.flameId === player.flameId);
+      const inCone = flaming && fwd > -0.2 && fwd < 3.3 && Math.abs(lat) < fwd * 0.65 + 0.8 && Math.abs(dy) < 1.8 && !(th.flameId === player.flameId);
       const inCharge = charging && fwd > -0.5 && fwd < 1.5 + th.r && Math.abs(lat) < 0.8 + th.r && Math.abs(dy) < 1.4;
       if (th.tick) { th.tick(dt, player, inCone, inCharge, alive); continue; }
       switch (th.kind) {

@@ -7,8 +7,8 @@ export const P = {
   gravity: 32, maxFall: -38,
   jumpV: 11.2, jumpCut: 0.42, coyote: 0.12, buffer: 0.14,
   glideFall: -2.1, glideSpeed: 9.5, glideRate: 4, glideMinVy: 3,
-  chargeSpeed: 19, chargeTime: 0.9, chargeTurn: 2.2, chargeCool: 0.45, chargeAirGrav: 0.3, carryTime: 1.1,
-  flameTime: 0.4, flameCool: 0.5, flameSlow: 0.6,
+  chargeSpeed: 19, chargeTime: 0.675, chargeTurn: 2.2, chargeCool: 0.45, chargeAirGrav: 0.3, carryTime: 1.1,
+  flameTime: 0.28, flameCool: 0.3, flameSlow: 0.85,
   stepUp: 0.5, snapDown: 0.45, walkN: 0.64, slideSpeed: 9,
   bumpTime: 0.35, margin: 0.4,
 };
@@ -71,7 +71,8 @@ export class Player {
       this.gliding = false;
       this.events.push({ type: 'charge' });
     }
-    if (inp.flamePressed && !inp.frozen && this.flameCool <= 0 && this.chargeT <= 0) {
+    // press = instant flame; holding the button keeps breathing the moment the cooldown ends
+    if ((inp.flamePressed || inp.flameHeld) && !inp.frozen && this.flameCool <= 0 && this.chargeT <= 0) {
       this.flameT = P.flameTime; this.flameCool = P.flameCool; this.flameId++;
       this.events.push({ type: 'flame' });
     }

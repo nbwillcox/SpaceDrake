@@ -123,7 +123,7 @@ export class Session {
     const move = {
       mx: fx_ * inp.my + rx * inp.mx, mz: fz_ * inp.my + rz * inp.mx,
       jumpPressed: pending.jumpPressed, jumpHeld: held,
-      flamePressed: pending.flamePressed, chargePressed: pending.chargePressed, frozen: inp.lookHeld || game.dying > 0 || this.finished,
+      flamePressed: pending.flamePressed, flameHeld: inp.flameHeld, chargePressed: pending.chargePressed, frozen: inp.lookHeld || game.dying > 0 || this.finished,
     };
     pending.jumpPressed = pending.flamePressed = pending.chargePressed = false;
     world.updateBoxes(STEP);
@@ -148,7 +148,7 @@ export class Session {
       case 'land': dragon.pulse('land'); fx.dust(player.x, player.y, player.z, Math.min(10, 4 + (e.impact | 0)), 1 + e.impact * 0.05); Input.rumble(Math.min(0.6, e.impact * 0.03), 0.3, 80); break;
       case 'charge': fx.dust(player.x, player.y, player.z, 8, 1.3); Input.rumble(0.3, 0.6, 120); break;
       case 'bump': fx.sparkle(player.x + Math.sin(player.yaw) * 0.6, player.y + 0.5, player.z + Math.cos(player.yaw) * 0.6, 12, 1, 0.9, 0.4); Input.rumble(0.8, 0.8, 160); break;
-      case 'flame': Input.rumble(0.0, 0.4, 150); break;
+      case 'flame': { const nx = Math.sin(player.yaw), nz = Math.cos(player.yaw); for (let i = 0; i < 4; i++) fx.flame(player.x + nx * 0.8, player.y + 0.62, player.z + nz * 0.8, nx, nz); Input.rumble(0.0, 0.4, 110); break; }
     }
     this.app.sfx && this.app.sfx(e.type, e, this);
   }

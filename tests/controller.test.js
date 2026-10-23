@@ -148,6 +148,20 @@ function run(p, secs, f) {
   ok(maxOff > 3 && stayed, `rider carried by platform (max offset ${maxOff.toFixed(1)} m)`);
 }
 
+// --- charge is ~25% shorter than before (0.9 s at 19 m/s = 17.1 m); flame answers the press on the same step and repeats while held
+{
+  const w = mk(() => 0);
+  const p = new Player(w, 20, 0, 32, Math.PI / 2); run(p, 0.2, () => ({}));
+  const x0 = p.x; run(p, 1.2, (t, i) => ({ chargePressed: i === 0 }));
+  const dist = p.x - x0;
+  ok(dist > 11.5 && dist < 14.5, `charge covers ~13 m (${dist.toFixed(1)} m)`);
+  const q = new Player(w, 32, 0, 32, 0); run(q, 0.2, () => ({}));
+  q.step(DT, Object.assign({}, NONE, { flamePressed: true }));
+  ok(q.flameT > 0, 'flame starts on the same step as the press');
+  let ids = 0, last = q.flameId; run(q, 1.0, () => { if (q.flameId !== last) { ids++; last = q.flameId; } return { flameHeld: true }; });
+  ok(ids >= 3, `holding flame re-breathes (${ids} extra flames in 1 s)`);
+}
+
 // --- raycast
 {
   const w = mk(() => 0, [{ min: [30, 0, 30], max: [34, 3, 34] }]);

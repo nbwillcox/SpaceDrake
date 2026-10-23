@@ -165,9 +165,9 @@ export function createDragon() {
 
     // head: look up when flaming, down when charging; jaw opens with a flicker
     const hp = p.flaming ? -0.45 : p.charging ? 0.4 : (p.vy > 3 ? -0.15 : 0.05);
-    head.rotation.x += (hp - head.rotation.x) * (1 - Math.exp(-14 * dt));
+    head.rotation.x += (hp - head.rotation.x) * (1 - Math.exp(-(p.flaming ? 40 : 14) * dt));
     const jt = p.flaming ? 0.5 + Math.sin(st.t * 30) * 0.1 : (Math.sin(st.t * 1.7) > 0.96 ? 0.12 : 0);
-    jaw.rotation.x += (jt - jaw.rotation.x) * (1 - Math.exp(-20 * dt));
+    jaw.rotation.x += (jt - jaw.rotation.x) * (1 - Math.exp(-(p.flaming ? 50 : 20) * dt));
     neck.rotation.x = -st.lean * 0.5;
 
     // blink every few seconds

@@ -36,9 +36,9 @@ export class Fx {
 
   flame(x, y, z, dx, dz) {
     for (let i = 0; i < 3; i++) {
-      const sp = 5 + Math.random() * 3.5;
+      const sp = 7 + Math.random() * 4;
       this.emit({ x, y, z, vx: dx * sp + (Math.random() - 0.5) * 1.6, vy: (Math.random() - 0.4) * 1.2 + 0.4, vz: dz * sp + (Math.random() - 0.5) * 1.6,
-        life: 0.32 + Math.random() * 0.2, s0: 0.28, s1: 0.95, r: 1, gc: 0.55 + Math.random() * 0.25, b: 0.12, drag: 1.5 });
+        life: 0.22 + Math.random() * 0.16, s0: 0.3, s1: 1.0, r: 1, gc: 0.55 + Math.random() * 0.25, b: 0.12, drag: 1.5 });
     }
   }
   dust(x, y, z, n = 5, power = 1) {

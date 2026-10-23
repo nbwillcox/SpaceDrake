@@ -176,7 +176,7 @@ export class FlightSession {
 
   // ---- stepping
   advance(dt, inp) {
-    if (inp.flamePressed) this.pending.flamePressed = true;
+    if (inp.flamePressed || (inp.flameHeld && this.flameT <= 0)) this.pending.flamePressed = true;
     if (inp.chargePressed) this.pending.chargePressed = true;
     this.acc += dt;
     let n = 0;
@@ -194,8 +194,8 @@ export class FlightSession {
     const lateralMax = def.corridor ? def.corridor[0] : 18, up = def.corridor ? def.corridor[1] : 10;
 
     // controls
-    if (this.pending.chargePressed && this.dashCool <= 0) { this.dash = 0.55; this.dashCool = 1.4; this.app.sfx && this.app.sfx('charge'); this.fx.dust(this.pos.x, this.pos.y, this.pos.z, 8, 1.4); }
-    if (this.pending.flamePressed && this.flameT <= 0) { this.flameT = 0.4; this.app.sfx && this.app.sfx('flame'); }
+    if (this.pending.chargePressed && this.dashCool <= 0) { this.dash = 0.41; this.dashCool = 1.2; this.app.sfx && this.app.sfx('charge'); this.fx.dust(this.pos.x, this.pos.y, this.pos.z, 8, 1.4); }
+    if (this.pending.flamePressed && this.flameT <= 0) { this.flameT = 0.28; this.app.sfx && this.app.sfx('flame'); }
     this.pending.chargePressed = this.pending.flamePressed = false;
     const boosting = inp.jumpHeld;
     const target = this.dash > 0 ? 36 : boosting ? 25 : 16;
