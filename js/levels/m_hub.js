@@ -49,11 +49,11 @@ export default {
       lantern(...c.at('plaza', 90, 14), Math.PI),
       elder(...c.at('windHill', 270, 3), 'This is a hub. Every portal is a new adventure!'),
       elder(38, 52, 'Gems you find stay yours. Come back anytime to get the rest.'),
-      { t: 'sunstone', id: 0, ...(() => { const [x, z] = c.at('windHill', 90, 4); return { x, z }; })(), h: 1.4 },
+      { t: 'sunstone', id: 0, ...(() => { const [x, z] = c.at('windHill', 25, 6.5); return { x, z }; })(), h: 1.4 },
     ];
   },
   decor: (c) => { const n = c.node('windHill'); return [{ k: 'windmill', x: n.x, y: n.h, z: n.z, s: 1, ry: 0, v: 0.5 }, { k: 'windmill_anim', x: n.x, y: n.h, z: n.z, s: 1, ry: 0, v: 0.5 }]; },
-  boxes: (c) => { const n = c.node('windHill'); return [{ min: [n.x - 2.9, n.h - 0.5, n.z - 2.9], max: [n.x + 2.9, n.h + 8, n.z + 2.9], hidden: true }]; },
+  boxes: (c) => { const n = c.node('windHill'); return [{ min: [n.x - 3.0, n.h - 0.5, n.z - 3.0], max: [n.x + 3.0, n.h + 8, n.z + 3.0], hidden: true }]; },
   fill: [
     { t: 'pile', n: 14, v: 1, where: 'low', count: 6 }, { t: 'pile', n: 5, v: 2, where: 'low', count: 5 }, { t: 'ring', n: 3, v: 1, count: 10, r: 2.4 },
     { t: 'crate', n: 5, gems: [1, 1, 2], where: 'low' }, { t: 'vase', n: 5, gems: [1, 2], where: 'low' },

@@ -30,23 +30,62 @@ export function landmarkKinds(H) {
   return {
     // ---- Mossgate hub: round stone windmill (the sails are the animated part)
     windmill(p) {
-      const wall = 0xe3d8c4, brick = 0xb39a80, roof = 0xa5503c, wood = 0x7a4f2e;
+      const plaster = 0xe6dac4, stone = 0x9a8f80, stone2 = 0xb3a793, roof = 0x9c4a38, wood = 0x7a4f2e, dwood = 0x4e3220, iron = 0x2c2c34;
+      const rad = (y) => 2.9 - (y - 0.5) * 0.108; // plaster tower radius at height y
       const parts = [
-        { g: J(cyl(3.1, 3.4, 0.6, 10), 0.05, 1), c: shade(brick, 0.85), m: T(0, 0.3, 0) },
-        { g: J(cyl(2.1, 2.9, 7.4, 10), 0.07, 2), c: wall, m: T(0, 4.2, 0), sh: 0.2 },
+        { g: J(cyl(3.0, 3.3, 0.35, 14), 0.05, 1), c: shade(stone, 0.8), m: T(0, 0.175, 0) },
+        { g: J(cyl(2.78, 3.05, 2.0, 14), 0.05, 2), c: stone, m: T(0, 1.5, 0), sh: 0.2 },
+        { g: J(cyl(2.1, 2.68, 5.4, 14), 0.05, 3), c: plaster, m: T(0, 5.2, 0), sh: 0.2 },
+        { g: cyl(2.8, 2.8, 0.18, 14), c: stone2, m: T(0, 2.5, 0) },
       ];
-      for (let i = 0; i < 8; i++) { const a = i * 0.85; parts.push({ g: J(ico(0.45, 0), 0.2, 3 + i), c: shade(brick, 0.9 + (i % 3) * 0.08), m: mul(T(Math.cos(a) * 3.3, 0.25, Math.sin(a) * 3.3), S(1.3, 0.7, 1)), sh: 0.5 }); }
-      for (const y of [1.6, 3.7, 5.8]) parts.push({ g: J(cyl(2.55 - (y - 1.6) * 0.1, 2.6 - (y - 1.6) * 0.1, 0.2, 10), 0.03, 4 + y), c: brick, m: T(0, y, 0) });
-      arch(parts, 0, 0.5, 2.6, 1.1, 1.3, 0xb8a78e, 0x6a4a2e);
-      windowAt(parts, 0, 4.3, 2.34, 0, 0.5, 0.9); windowAt(parts, 0, 4.3, 2.34, 2.1, 0.5, 0.9); windowAt(parts, 0, 4.3, 2.34, -2.1, 0.5, 0.9);
-      flowerBox(parts, 0, 3.55, 2.62, 1.0);
-      parts.push({ g: cyl(2.5, 2.5, 0.16, 12), c: wood, m: T(0, 6.9, 0) });
-      for (let i = 0; i < 14; i++) { const a = (i / 14) * Math.PI * 2; parts.push({ g: cyl(0.04, 0.04, 0.7, 4), c: wood, m: T(Math.cos(a) * 2.38, 7.3, Math.sin(a) * 2.38) }); }
-      parts.push({ g: ring(2.38, 0.05, 14), c: wood, m: T(0, 7.65, 0) });
-      shingles(parts, 3.05, 0.5, 7.4, 10.5, 9, roof, 10, 30);
-      parts.push({ g: ico(0.3, 0), c: shade(wood, 0.8), m: T(0, 10.7, 0) });
+      // dressed stone blocks on the base course, skipping the doorway
+      for (let row = 0; row < 3; row++) {
+        const n = 15, y = 0.8 + row * 0.6;
+        for (let i = 0; i < n; i++) {
+          const a = ((i + (row % 2) * 0.5) / n) * Math.PI * 2;
+          if (Math.abs(Math.atan2(Math.sin(a - Math.PI / 2), Math.cos(a - Math.PI / 2))) < 0.5) continue;
+          const r = 3.0 - (y - 0.5) * 0.12 + 0.05;
+          parts.push({ g: J(box(1.15, 0.5, 0.26), 0.04, 100 + row * 20 + i), c: shade(i % 3 ? stone2 : stone, 0.9 + ((i * 7 + row) % 5) * 0.04), m: mul(T(Math.cos(a) * r, y, Math.sin(a) * r), RY(Math.PI / 2 - a)), sh: 0.3 });
+        }
+      }
+      // timber bands and studs on the plaster
+      for (const y of [3.5, 5.5]) parts.push({ g: J(cyl(rad(y) + 0.06, rad(y) + 0.06, 0.16, 14), 0.02, 40 + y), c: dwood, m: T(0, y, 0) });
+      for (let i = 0; i < 10; i++) { const a = (i / 10) * Math.PI * 2 + 0.3, r = rad(4.5) + 0.04; parts.push({ g: box(0.16, 2.2, 0.14), c: dwood, m: mul(T(Math.cos(a) * r, 4.5, Math.sin(a) * r), RY(Math.PI / 2 - a)) }); }
+      // doorway: stone voussoir arch, planked door with iron straps, steps, lantern
+      const dy = 0.35, dw = 1.2, dh = 1.35, dz = 2.85;
+      parts.push({ g: box(dw, dh, 0.3), c: dwood, m: T(0, dy + dh / 2, dz) }, { g: cyl(dw / 2, dw / 2, 0.3, 10).rotateX(Math.PI / 2), c: dwood, m: T(0, dy + dh, dz) });
+      for (let i = 0; i < 5; i++) parts.push({ g: box(0.2, dh + 0.06, 0.1), c: i % 2 ? wood : shade(wood, 1.15), m: T(-0.48 + i * 0.24, dy + dh / 2, dz + 0.17) });
+      parts.push({ g: box(dw, 0.4, 0.1), c: wood, m: T(0, dy + dh + 0.2, dz + 0.17) });
+      for (const y of [0.5, 0.95]) parts.push({ g: box(dw, 0.1, 0.14), c: iron, m: T(0, dy + y, dz + 0.2) });
+      parts.push({ g: new THREE.TorusGeometry(0.09, 0.025, 5, 8), c: iron, m: T(0.38, dy + 0.75, dz + 0.27) });
+      const R = dw / 2 + 0.2;
+      for (let i = 0; i <= 8; i++) {
+        const a = (i / 8) * Math.PI, key = i === 4;
+        parts.push({ g: J(box(key ? 0.4 : 0.3, key ? 0.5 : 0.4, 0.55), 0.03, 200 + i), c: key ? 0xcfc3ae : shade(stone2, 0.88 + (i % 3) * 0.07), m: mul(T(Math.cos(a) * R, dy + dh + Math.sin(a) * R, dz + 0.1), RZ(a - Math.PI / 2)), sh: 0.3 });
+      }
+      for (const sx of [-1, 1]) for (let j = 0; j < 3; j++) parts.push({ g: J(box(0.36, 0.5, 0.55), 0.03, 220 + j), c: shade(stone2, 0.88 + j * 0.06), m: T(sx * R, dy + 0.25 + j * 0.5, dz + 0.1), sh: 0.3 });
+      parts.push({ g: box(1.9, 0.12, 0.7), c: stone2, m: T(0, dy + 0.06, 3.35) }, { g: box(2.5, 0.18, 0.6), c: shade(stone, 1.1), m: T(0, 0.09, 3.7) });
+      parts.push({ g: box(0.05, 0.4, 0.05), c: iron, m: T(1.55, 2.0, 2.78) }, { g: box(0.05, 0.05, 0.4), c: iron, m: T(1.55, 2.2, 2.9) }, { g: box(0.24, 0.32, 0.24), c: 0xffd27a, m: T(1.55, 1.95, 3.1), sh: 0 }, { g: cone(0.2, 0.2, 4), c: iron, m: T(1.55, 2.2, 3.1) });
+      // barrel and sacks beside the door
+      parts.push({ g: cyl(0.38, 0.38, 0.8, 8), c: wood, m: T(-1.75, 0.4, 3.4) }, { g: cyl(0.4, 0.4, 0.07, 8), c: iron, m: T(-1.75, 0.2, 3.4) }, { g: cyl(0.4, 0.4, 0.07, 8), c: iron, m: T(-1.75, 0.62, 3.4) });
+      for (let i = 0; i < 3; i++) parts.push({ g: J(ico(0.34, 1), 0.06, 300 + i), c: [0xd9c79c, 0xc9b78a, 0xe0d2ac][i], m: mul(T(-2.35 + i * 0.1, 0.25 + i * 0.05, 3.15 + i * 0.4), S(1, 0.8, 0.9)), sh: 0.4 });
+      // windows
+      windowAt(parts, 0, 4.4, 2.45, 0, 0.5, 0.9); windowAt(parts, 0, 4.4, 2.45, 2.1, 0.5, 0.9); windowAt(parts, 0, 4.4, 2.45, -2.1, 0.5, 0.9);
+      windowAt(parts, 0, 6.3, 2.2, 1.0, 0.36, 0.6, false); windowAt(parts, 0, 6.3, 2.2, -1.0, 0.36, 0.6, false);
+      flowerBox(parts, 0, 3.75, 2.68, 1.0);
+      // gallery deck with corbels, posts and rail
+      parts.push({ g: cyl(2.65, 2.65, 0.16, 14), c: wood, m: T(0, 6.9, 0) });
+      for (let i = 0; i < 10; i++) { const a = (i / 10) * Math.PI * 2; parts.push({ g: box(0.18, 0.45, 0.5), c: dwood, m: mul(T(Math.cos(a) * 2.35, 6.62, Math.sin(a) * 2.35), RY(Math.PI / 2 - a)) }); }
+      for (let i = 0; i < 16; i++) { const a = (i / 16) * Math.PI * 2; parts.push({ g: cyl(0.04, 0.04, 0.75, 4), c: wood, m: T(Math.cos(a) * 2.52, 7.3, Math.sin(a) * 2.52) }); }
+      parts.push({ g: ring(2.52, 0.05, 16), c: wood, m: T(0, 7.65, 0) });
+      // cap
+      parts.push({ g: ring(3.08, 0.1, 16), c: dwood, m: T(0, 7.42, 0) });
+      shingles(parts, 3.05, 0.5, 7.4, 10.5, 11, roof, 12, 30);
+      parts.push({ g: ico(0.28, 0), c: shade(wood, 0.8), m: T(0, 10.6, 0) }, { g: cyl(0.04, 0.04, 1.1, 4), c: iron, m: T(0, 11.2, 0) }, { g: box(0.9, 0.12, 0.04), c: iron, m: T(0.3, 11.6, 0) }, { g: cone(0.12, 0.3, 4), c: iron, m: mul(T(0.82, 11.6, 0), RZ(-Math.PI / 2)) });
       parts.push({ g: J(cyl(0.34, 0.34, 1.6, 6), 0.03, 22).rotateX(Math.PI / 2), c: wood, m: T(0, 8.2, 2.4) });
-      vines(parts, [[-1.9, 1.6, 1.4, 0.55], [-2.2, 2.4, 0.9, 0.45], [-1.5, 3.3, 1.8, 0.4], [2.2, 1.2, 1.1, 0.5]], 60);
+      // tail pole and hoist beam
+      parts.push({ g: box(0.24, 0.24, 8.2), c: wood, m: mul(T(0, 4.7, -4.65), RX(-1.026)) }, { g: box(0.2, 0.2, 1.6), c: dwood, m: T(1.1, 6.2, 2.4) }, { g: cyl(0.025, 0.025, 1.0, 4), c: 0xcbb58a, m: T(1.1, 5.7, 3.1) }, { g: J(ico(0.22, 1), 0.04, 9), c: 0xd9c79c, m: mul(T(1.1, 5.05, 3.1), S(1, 0.8, 0.9)) });
+      vines(parts, [[-2.0, 1.8, 1.4, 0.5], [-2.3, 2.6, 0.7, 0.42], [-1.6, 3.4, 1.6, 0.36], [2.3, 1.5, 1.0, 0.45], [2.0, 2.5, 1.5, 0.3]], 60);
       return merge(parts);
     },
 
@@ -214,14 +253,15 @@ export function landmarkAnim(H) {
 
   return {
     windmill_anim(p) {
-      const wood = 0x7a4f2e, parts = [];
+      const wood = 0x7a4f2e, dwood = 0x4e3220, parts = [];
       for (let k = 0; k < 4; k++) {
         const base = RZ(k * Math.PI / 2);
-        parts.push({ g: box(0.22, 7.2, 0.16), c: wood, m: mul(base, T(0, 3.9, 0)) });
-        for (let r = 1.2; r < 7.2; r += 0.9) parts.push({ g: box(1.5, 0.08, 0.1), c: wood, m: mul(base, T(0.75, r, 0.02)) });
-        parts.push({ g: box(0.06, 5.6, 0.1), c: wood, m: mul(base, T(1.5, 4.1, 0.02)) }, { g: box(1.34, 5.4, 0.03), c: 0xf4efe0, m: mul(base, T(0.78, 4.0, 0.04)), sh: 0.1 });
+        parts.push({ g: box(0.2, 7.4, 0.16), c: wood, m: mul(base, T(0, 3.9, 0)) });
+        for (let r = 1.2; r < 7.2; r += 0.75) parts.push({ g: box(1.55, 0.07, 0.09), c: dwood, m: mul(base, T(0.78, r, 0.02)) });
+        parts.push({ g: box(0.07, 5.8, 0.1), c: dwood, m: mul(base, T(1.58, 4.2, 0.02)) }, { g: box(1.6, 0.08, 0.1), c: dwood, m: mul(base, T(0.8, 7.1, 0.02)) });
+        for (let i = 0; i < 7; i++) parts.push({ g: box(1.3, 0.8, 0.03), c: i % 2 ? 0xf2ead4 : 0xe4d6b4, m: mul(base, RY(0.1 + i * 0.05), T(0.8, 1.55 + i * 0.82, 0.05)), sh: 0.1 });
       }
-      parts.push({ g: ico(0.46, 1), c: shade(wood, 0.8), m: T(0, 0, 0.1) });
+      parts.push({ g: ico(0.5, 1), c: shade(wood, 0.8), m: T(0, 0, 0.1) }, { g: cyl(0.3, 0.3, 0.25, 8).rotateX(Math.PI / 2), c: 0x2c2c34, m: T(0, 0, 0.3) });
       const sails = new THREE.Mesh(merge(parts), mat), root = group(sails); root.position.set(0, 8.2, 3.35);
       return { obj: root, update: (t) => { sails.rotation.z = -t * 0.45; } };
     },
