@@ -61,13 +61,8 @@ export default {
     { t: 'spikes', x: 150, z: 80, w: 3, d: 3 }, { t: 'spikes', x: 144, z: 70, w: 3, d: 3 },
     { t: 'exit', x: c.at('exitPad')[0], z: c.at('exitPad')[1] },
   ],
-  boxes: () => [
-    // the mill: main house, roof, wheel housing
-    { min: [172, 92, 94], max: [186, 94.5, 108], color: 0xd9c19a, edge: 0x8a7248, hidden: false },
-    { min: [172, -1, 108], max: [186, 4.5, 116], color: 0xcfa86e, edge: 0x7a5a2a },
-    { min: [172, 4.5, 108.5], max: [186, 5.6, 115.5], color: 0xc4533f, edge: 0x6a2a20 },
-    { min: [190, -1, 94], max: [194, 2.6, 106], color: 0x9aa7b8, edge: 0x5a6a80 },
-  ],
+  decor: () => [{ k: 'millhouse', x: 179, y: 0.5, z: 112, s: 1, ry: 0, v: 0.5 }],
+  boxes: () => [{ min: [172, -1, 108], max: [186, 5.5, 116], hidden: true }],
   fill: [
     { t: 'pile', n: 22, v: 1, where: 'low', count: 6 }, { t: 'pile', n: 7, v: 2, where: 'low', count: 5 }, { t: 'ring', n: 5, v: 1, count: 10, r: 2.4 },
     { t: 'pile', n: 5, v: 5, where: 'high', count: 4 },

@@ -52,21 +52,8 @@ export default {
       { t: 'sunstone', id: 0, ...(() => { const [x, z] = c.at('windHill', 90, 4); return { x, z }; })(), h: 1.4 },
     ];
   },
-  decor: (c) => {
-    // a little windmill: tower, cap and four blades as static decor-boxes
-    return [];
-  },
-  boxes: (c) => {
-    const n = c.node('windHill'), y = n.h;
-    const col = 0xe8dcc4;
-    return [
-      { min: [n.x - 2.6, y - 0.5, n.z - 2.6], max: [n.x + 2.6, y + 7, n.z + 2.6], color: col, edge: 0xb89f78 },
-      { min: [n.x - 3.4, y + 7, n.z - 3.4], max: [n.x + 3.4, y + 8.4, n.z + 3.4], color: 0xd1564a, edge: 0x7a2a22 },
-      { min: [n.x - 0.3, y + 4, n.z + 2.6], max: [n.x + 0.3, y + 5, n.z + 2.9], color: 0x6a4a2a },
-      { min: [n.x - 8, y + 4.6, n.z + 2.9], max: [n.x + 8, y + 5.2, n.z + 3.2], color: 0xf4efe0, edge: 0xb8ad90, hidden: false },
-      { min: [n.x - 0.3, y - 3, n.z + 2.9], max: [n.x + 0.3, y + 13, n.z + 3.2], color: 0xf4efe0, edge: 0xb8ad90, hidden: false },
-    ];
-  },
+  decor: (c) => { const n = c.node('windHill'); return [{ k: 'windmill', x: n.x, y: n.h, z: n.z, s: 1, ry: 0, v: 0.5 }]; },
+  boxes: (c) => { const n = c.node('windHill'); return [{ min: [n.x - 2.9, n.h - 0.5, n.z - 2.9], max: [n.x + 2.9, n.h + 8, n.z + 2.9], hidden: true }]; },
   fill: [
     { t: 'pile', n: 14, v: 1, where: 'low', count: 6 }, { t: 'pile', n: 5, v: 2, where: 'low', count: 5 }, { t: 'ring', n: 3, v: 1, count: 10, r: 2.4 },
     { t: 'crate', n: 5, gems: [1, 1, 2], where: 'low' }, { t: 'vase', n: 5, gems: [1, 2], where: 'low' },

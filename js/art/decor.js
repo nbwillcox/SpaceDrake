@@ -2,6 +2,7 @@
 // Shapes are hand-jittered (hash-based vertex noise) so nothing is a perfect cone or sphere, and every part
 // gets baked top-light / bottom-shadow shading so forms read even in flat light.
 import * as THREE from 'three';
+import { landmarkKinds } from './landmarks.js';
 
 // deterministic noise on position -> identical vertices move together, so indexed meshes never crack
 const hash3 = (x, y, z) => { const h = Math.sin(x * 127.1 + y * 311.7 + z * 74.7) * 43758.5453; return h - Math.floor(h); };
@@ -179,6 +180,8 @@ const KINDS = {
     ]);
   },
 };
+
+Object.assign(KINDS, landmarkKinds({ merge, J, T, S, RY, RZ, RX, mul, cone, cyl, ico, box, shade, THREE }));
 
 export function buildDecor(spec, theme) {
   const group = new THREE.Group();

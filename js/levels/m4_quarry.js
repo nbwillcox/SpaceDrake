@@ -51,11 +51,10 @@ export default {
     { t: 'spikes', x: 100, z: 100, w: 4, d: 3 }, { t: 'spikes', x: 138, z: 90, w: 3, d: 3 },
     { t: 'exit', x: c.at('crown', 270, 5)[0], z: c.at('crown', 270, 5)[1] },
   ],
+  decor: () => [{ k: 'mineentrance', x: 66, y: 0.5, z: 141, s: 1, ry: 0, v: 0.5 }],
   boxes: () => [
-    // mine entrance frame
-    { min: [57, -1, 140], max: [60, 5, 142], color: 0x8a6a4a, edge: 0x4a3a2a },
-    { min: [72, -1, 140], max: [75, 5, 142], color: 0x8a6a4a, edge: 0x4a3a2a },
-    { min: [57, 5, 140], max: [75, 6.4, 142], color: 0x8a6a4a, edge: 0x4a3a2a },
+    { min: [62.5, -1, 140.6], max: [63.5, 5.8, 141.4], hidden: true }, { min: [68.5, -1, 140.6], max: [69.5, 5.8, 141.4], hidden: true },
+    { min: [58.5, -1, 140], max: [61.5, 6, 143], hidden: true }, { min: [70.5, -1, 140], max: [73.5, 6, 143], hidden: true },
   ],
   fill: [
     { t: 'pile', n: 20, v: 1, where: 'low', count: 6 }, { t: 'pile', n: 9, v: 2, where: 'high', count: 5 }, { t: 'ring', n: 5, v: 1, count: 10, r: 2.4 },
