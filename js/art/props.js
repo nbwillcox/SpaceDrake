@@ -112,6 +112,21 @@ function mothWingGeometry() {
   return g;
 }
 
+// ---- shared soft glow sprite texture
+let _glowTex = null;
+function glowTex() {
+  if (_glowTex) return _glowTex;
+  const c = document.createElement('canvas'); c.width = c.height = 64;
+  const x = c.getContext('2d'); const gr = x.createRadialGradient(32, 32, 0, 32, 32, 32);
+  gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.3, 'rgba(255,255,255,0.5)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+  x.fillStyle = gr; x.fillRect(0, 0, 64, 64);
+  _glowTex = new THREE.CanvasTexture(c); return _glowTex;
+}
+const glowSprite = (color, scale, opacity = 1) => {
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex(), color, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity }));
+  s.scale.setScalar(scale); return s;
+};
+
 export function makeMoth() {
   const g = new THREE.Group();
   const wingMat = new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide, transparent: true, opacity: 0.92 });
@@ -236,13 +251,46 @@ export function makeBarrier(w, h, d, by) {
   return g;
 }
 
+// A stone-and-bronze brazier. Cold: dull coals that pulse faintly. Lit: layered flame, halo and rising embers.
 export function makeBrazier() {
   const g = new THREE.Group();
-  g.add(mesh(new THREE.CylinderGeometry(0.1, 0.16, 1.0, 6), M(0x4a3f5f), 0, 0.5, 0));
-  g.add(mesh(new THREE.CylinderGeometry(0.42, 0.22, 0.34, 8), M(0x6a5a80), 0, 1.15, 0));
-  const flame = mesh(new THREE.ConeGeometry(0.3, 0.7, 7), new THREE.MeshBasicMaterial({ color: 0xff9a3c, transparent: true, opacity: 0.95 }), 0, 1.6, 0); flame.visible = false; g.add(flame);
-  const cold = mesh(ico(0.22, 0), M(0x3a3a48), 0, 1.35, 0); g.add(cold);
-  g.userData.flame = flame; g.userData.cold = cold;
+  const stone = M(0x6c6480), stone2 = M(0x857c9c), bronze = M(0xb8793a), gold = M(0xffd36a);
+  g.add(mesh(new THREE.CylinderGeometry(0.62, 0.72, 0.22, 8), stone, 0, 0.11, 0));
+  g.add(mesh(new THREE.CylinderGeometry(0.44, 0.58, 0.2, 8), stone2, 0, 0.32, 0));
+  g.add(mesh(new THREE.CylinderGeometry(0.2, 0.3, 0.75, 8), stone, 0, 0.8, 0));
+  g.add(mesh(new THREE.TorusGeometry(0.27, 0.06, 5, 12).rotateX(Math.PI / 2), gold, 0, 0.62, 0));
+  g.add(mesh(new THREE.TorusGeometry(0.24, 0.05, 5, 12).rotateX(Math.PI / 2), gold, 0, 1.0, 0));
+  // bowl: lathe profile
+  const prof = [[0, 0], [0.22, 0.04], [0.42, 0.18], [0.56, 0.38], [0.58, 0.46], [0.5, 0.44], [0.4, 0.3], [0.0, 0.2]].map(([x, y]) => new THREE.Vector2(x, y));
+  const bowl = mesh(new THREE.LatheGeometry(prof, 12), M(0x8a5a2c, { side: THREE.DoubleSide }), 0, 1.06, 0); g.add(bowl);
+  g.add(mesh(new THREE.TorusGeometry(0.56, 0.055, 6, 18).rotateX(Math.PI / 2), bronze, 0, 1.52, 0));
+  for (let i = 0; i < 3; i++) { const a = (i / 3) * Math.PI * 2; g.add(mesh(new THREE.ConeGeometry(0.07, 0.3, 4), gold, Math.cos(a) * 0.5, 1.64, Math.sin(a) * 0.5)); }
+  // coals
+  const coalMat = new THREE.MeshBasicMaterial({ color: 0x4a2a22 });
+  const coals = new THREE.Group(); coals.position.y = 1.3;
+  for (let i = 0; i < 5; i++) { const a = i * 1.3, r = i ? 0.22 : 0; const c = mesh(ico(0.13, 0), coalMat, Math.cos(a) * r, i * 0.01, Math.sin(a) * r); c.scale.y = 0.7; coals.add(c); }
+  g.add(coals);
+  // "light me" hint ring (cold only)
+  const hint = glowSprite(0xff9a4a, 1.5, 0.35); hint.position.y = 1.5; g.add(hint);
+  // flame (lit only)
+  const fl = new THREE.Group(); fl.position.y = 1.5; fl.visible = false; g.add(fl);
+  const fm = (c, o) => new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: o, blending: THREE.AdditiveBlending, depthWrite: false });
+  const outer = mesh(new THREE.ConeGeometry(0.42, 1.3, 8), fm(0xff6a1a, 0.7), 0, 0.65, 0), mid = mesh(new THREE.ConeGeometry(0.3, 1.0, 8), fm(0xffa82e, 0.85), 0, 0.5, 0), core = mesh(new THREE.ConeGeometry(0.16, 0.65, 7), fm(0xfff4b0, 0.95), 0, 0.33, 0);
+  const tongue = [0, 1, 2].map((i) => { const t = mesh(new THREE.ConeGeometry(0.14, 0.7, 6), fm(0xff8a2a, 0.7), Math.cos(i * 2.1) * 0.22, 0.4, Math.sin(i * 2.1) * 0.22); fl.add(t); return t; });
+  fl.add(outer, mid, core);
+  const glow = glowSprite(0xffa040, 4.2, 0.65); glow.position.y = 0.6; fl.add(glow);
+  const embers = [];
+  for (let i = 0; i < 7; i++) { const e = glowSprite(0xffc060, 0.22, 0.9); fl.add(e); embers.push({ s: e, p: Math.random(), x: (Math.random() - 0.5) * 0.7, z: (Math.random() - 0.5) * 0.7, sp: 0.4 + Math.random() * 0.5 }); }
+  g.userData.flame = fl; g.userData.cold = coals;
+  g.userData.setLit = (on) => { fl.visible = on; hint.visible = !on; coalMat.color.setHex(on ? 0xff5a1a : 0x4a2a22); };
+  g.userData.tick = (t, lit) => {
+    if (!lit) { const p = 0.5 + Math.sin(t * 2.2) * 0.5; coalMat.color.setRGB(0.3 + p * 0.25, 0.14 + p * 0.06, 0.12); hint.material.opacity = 0.18 + p * 0.3; hint.scale.setScalar(1.3 + p * 0.4); return; }
+    const w = (k, sp) => 1 + Math.sin(t * sp + k) * 0.12;
+    outer.scale.set(w(0, 11), w(1, 13) * 1.05, w(0, 11)); mid.scale.set(w(2, 14), w(3, 17), w(2, 14)); core.scale.set(w(4, 19), w(5, 21), w(4, 19));
+    tongue.forEach((tg, i) => { tg.scale.y = 0.7 + Math.abs(Math.sin(t * 9 + i * 2)) * 0.7; tg.position.y = 0.3 + tg.scale.y * 0.25; });
+    fl.rotation.y = t * 0.8; glow.material.opacity = 0.55 + Math.sin(t * 17) * 0.1;
+    for (const e of embers) { const f = ((t * e.sp + e.p) % 1); e.s.position.set(e.x * (1 + f), 0.4 + f * 2.2, e.z * (1 + f)); e.s.material.opacity = 0.9 * (1 - f); e.s.scale.setScalar(0.24 * (1 - f * 0.6)); }
+  };
   return g;
 }
 

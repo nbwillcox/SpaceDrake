@@ -305,7 +305,7 @@ export class Game {
           break;
         }
         case 'brazier': {
-          th.mesh.userData.flame.scale.y = 1 + Math.sin(this.time * 14 + th.x) * 0.15;
+          th.mesh.userData.tick(this.time, th.lit);
           if (!th.lit && inCone) this._lightBrazier(th);
           break;
         }
@@ -383,7 +383,7 @@ export class Game {
   }
 
   _lightBrazier(th) {
-    th.lit = true; th.mesh.userData.flame.visible = true; th.mesh.userData.cold.visible = false;
+    th.lit = true; th.mesh.userData.setLit(true);
     this.events.push({ type: 'checkpoint' });
     const mates = this.things.filter((t) => t.kind === 'brazier' && t.group === th.group);
     if (mates.every((t) => t.lit)) {
@@ -410,7 +410,7 @@ export class Game {
     th.t = (th.t || 0) + dt;
     th.x = th.hx + Math.sin(th.t * 0.9) * 2.2; th.z = th.hz + Math.cos(th.t * 0.7) * 2.2; th.y = th.hy + Math.sin(th.t * 2.3) * 0.35;
     const u = th.mesh.userData, f = Math.sin(this.time * 22) * 0.9;
-    u.wl.rotation.z = f; u.wr.rotation.z = -f;
+    u.wl.rotation.z = f; u.wr.rotation.z = -f; u.tick && u.tick(this.time, th.hx);
     th.mesh.position.set(th.x, th.y, th.z); th.mesh.rotation.y = th.t * 0.9;
     if (inCone) {
       th.alive = false; th.mesh.visible = false; this.heal();
