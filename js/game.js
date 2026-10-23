@@ -290,7 +290,7 @@ export class Game {
         }
         case 'spring': {
           th.sq = Math.max(0, (th.sq || 0) - dt * 4);
-          th.mesh.userData.top.position.y = 0.42 - th.sq * 0.18; th.mesh.userData.coil.scale.y = 1 - th.sq * 0.6;
+          th.mesh.userData.setSquash(th.sq, this.time);
           if (alive && dist < th.r && py <= th.y + 0.9 && py >= th.y - 0.6 && player.vy <= 2) { player.bounce(th.power); th.sq = 1; this.events.push({ type: 'spring' }); }
           break;
         }

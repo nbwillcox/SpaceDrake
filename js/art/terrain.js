@@ -1,5 +1,6 @@
 // Terrain + box meshes. Triangle layout must match collide.js World.sample.
 import * as THREE from 'three';
+import { makeRaft } from './bridges.js';
 
 const hash = (a, b) => { let h = (a * 374761393 + b * 668265263) | 0; h = (h ^ (h >>> 13)) * 1274126177; return ((h ^ (h >>> 16)) >>> 0) / 4294967295; };
 
@@ -45,6 +46,7 @@ export function buildBoxMeshes(world, group) {
   for (const b of world.boxes) {
     if (b.hidden) continue;
     const w = b.max[0] - b.min[0], h = b.max[1] - b.min[1], d = b.max[2] - b.min[2];
+    if (b.raft) { const m = makeRaft(w, d, h); m.position.set(b.min[0] + w / 2, b.min[1] + h / 2, b.min[2] + d / 2); b.mesh = m; group.add(m); meshes.push(m); continue; }
     const g = new THREE.BoxGeometry(w, h, d);
     const m = new THREE.Mesh(g, new THREE.MeshLambertMaterial({ color: b.color || 0x9aa3b5, flatShading: true }));
     m.position.set(b.min[0] + w / 2, b.min[1] + h / 2, b.min[2] + d / 2);

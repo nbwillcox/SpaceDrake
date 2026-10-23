@@ -23,6 +23,14 @@ const glowSprite = (color, scale, opacity = 1) => {
 };
 
 
+// small helpers for the prop art below
+function jit(g, a, seed = 0) {
+  const p = g.attributes.position, h = (x, y, z) => { const v = Math.sin(x * 127.1 + y * 311.7 + z * 74.7) * 43758.5453; return v - Math.floor(v); };
+  for (let i = 0; i < p.count; i++) { const x = p.getX(i), y = p.getY(i), z = p.getZ(i); p.setXYZ(i, x + (h(x + seed, y, z) - 0.5) * a, y + (h(y + seed, z, x) - 0.5) * a, z + (h(z + seed, x, y) - 0.5) * a); }
+  g.computeVertexNormals(); return g;
+}
+const shadeHex = (hex, k) => new THREE.Color(hex).multiplyScalar(k).getHex();
+
 export const GEM_COLORS = { 1: 0xff4d6a, 2: 0x3ee07f, 5: 0x4da6ff, 10: 0xffd23e, 25: 0xd36bff };
 export const GEM_TIERS = [25, 10, 5, 2, 1];
 
@@ -94,7 +102,6 @@ export function makeVase() {
   g.rotation.y = Math.random() * 6.28;
   return g;
 }
-const shadeHex = (hex, k) => new THREE.Color(hex).multiplyScalar(k).getHex();
 
 export function makeChest() {
   const g = new THREE.Group();
@@ -167,22 +174,39 @@ export function makeLantern() {
   return g;
 }
 
+function miniDrake(body, belly, wing, horn) {
+  const g = new THREE.Group();
+  const bm = M(body), be = M(belly), wm = M(wing, { side: THREE.DoubleSide });
+  const torso = mesh(ico(0.5, 1), bm, 0, 0.62, 0); torso.scale.set(1, 0.85, 1.35); g.add(torso);
+  const bel = mesh(ico(0.42, 1), be, 0, 0.5, 0.12); bel.scale.set(0.9, 0.6, 1.2); g.add(bel);
+  const head = mesh(ico(0.34, 1), bm, 0, 1.08, 0.8); g.add(head);
+  const snout = mesh(ico(0.2, 1), be, 0, -0.08, 0.3); snout.scale.set(1, 0.75, 1.2); head.add(snout);
+  for (const s of [-1, 1]) {
+    head.add(mesh(new THREE.SphereGeometry(0.09, 8, 6), B(0xffffff), 0.14 * s, 0.1, 0.2), mesh(new THREE.SphereGeometry(0.05, 6, 5), B(0x1a1a2a), 0.15 * s, 0.1, 0.27));
+    const hn = mesh(new THREE.ConeGeometry(0.07, 0.34, 5), M(horn), 0.13 * s, 0.3, -0.05); hn.rotation.x = -0.5; hn.rotation.z = -0.2 * s; head.add(hn);
+    const w = mesh(new THREE.BufferGeometry().setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0, 0.9, 0.35, -0.2, 0.7, 0.0, -0.7, 0, 0, 0, 0.7, 0.0, -0.7, 0.2, 0, -0.55], 3)), wm, 0.28 * s, 0.95, -0.05);
+    w.geometry.computeVertexNormals(); w.scale.x = s; w.rotation.z = 0.25 * s; g.add(w);
+    for (const z of [-0.3, 0.38]) g.add(mesh(new THREE.CylinderGeometry(0.1, 0.12, 0.34, 6), bm, 0.3 * s, 0.17, z), mesh(ico(0.12, 0), be, 0.3 * s, 0.05, z + 0.05));
+  }
+  let y = 0.55, z = -0.62, r = 0.28;
+  for (let i = 0; i < 5; i++) { g.add(mesh(ico(r, 1), i % 2 ? be : bm, 0, y, z)); z -= r * 1.1; y += 0.02 + i * 0.03; r *= 0.78; }
+  g.add(mesh(ico(0.1, 0), B(0xffd36a), 0, y + 0.02, z - 0.05));
+  return g;
+}
+
 export function makeElder() {
   const g = new THREE.Group();
+  // crystal prison: a faceted spire with the elder drake frozen inside
   const crystal = new THREE.Group(); g.add(crystal);
-  const cm = new THREE.MeshLambertMaterial({ color: 0x8fe9ff, flatShading: true, transparent: true, opacity: 0.78, emissive: 0x2a6f88 });
-  const body = mesh(ico(0.55, 1), cm, 0, 0.7, 0); body.scale.set(1, 0.9, 1.3); crystal.add(body);
-  crystal.add(mesh(ico(0.34, 1), cm, 0, 1.3, 0.55));
-  const horn = mesh(new THREE.ConeGeometry(0.1, 0.4, 5), cm, 0.18, 1.62, 0.5); crystal.add(horn);
-  const horn2 = mesh(new THREE.ConeGeometry(0.1, 0.4, 5), cm, -0.18, 1.62, 0.5); crystal.add(horn2);
-  const tailc = mesh(new THREE.ConeGeometry(0.28, 1.1, 6), cm, 0, 0.4, -0.95); tailc.rotation.x = -1.3; crystal.add(tailc);
-  for (let i = 0; i < 4; i++) { const s = mesh(new THREE.ConeGeometry(0.18, 0.9, 5), cm, Math.cos(i * 1.57) * 0.75, 0.3, Math.sin(i * 1.57) * 0.75); s.rotation.z = Math.cos(i * 1.57) * 0.4; s.rotation.x = -Math.sin(i * 1.57) * 0.4; crystal.add(s); }
-  // freed version
+  const shellM = new THREE.MeshLambertMaterial({ color: 0x8fe9ff, flatShading: true, transparent: true, opacity: 0.5, emissive: 0x2a8aa8, depthWrite: false });
+  const frozen = miniDrake(0x8a9ab8, 0xb8c4d8, 0x7a8aa8, 0xdde6f2); frozen.scale.setScalar(1.05); frozen.position.y = 0.25; crystal.add(frozen);
+  crystal.add(mesh(jit(new THREE.CylinderGeometry(1.0, 1.25, 2.1, 6), 0.1, 2), shellM, 0, 1.15, 0), mesh(jit(new THREE.ConeGeometry(1.0, 1.1, 6), 0.1, 3), shellM, 0, 2.75, 0));
+  for (let i = 0; i < 6; i++) { const a = (i / 6) * Math.PI * 2 + 0.4, r = 1.35 + (i % 2) * 0.25; const s = mesh(jit(new THREE.ConeGeometry(0.3, 1.1 + (i % 3) * 0.4, 5), 0.06, 10 + i), shellM, Math.cos(a) * r, 0.5, Math.sin(a) * r); s.rotation.z = Math.cos(a) * 0.35; s.rotation.x = -Math.sin(a) * 0.35; crystal.add(s); }
+  const sparkle = glowSprite(0xbff4ff, 4.0, 0.35); sparkle.position.y = 1.5; crystal.add(sparkle);
+  // freed elder: golden drake with a glow
   const free = new THREE.Group(); free.visible = false; g.add(free);
-  const fm = M(0xffb23e);
-  const fb = mesh(ico(0.5, 1), fm, 0, 0.6, 0); fb.scale.set(1, 0.85, 1.25); free.add(fb);
-  free.add(mesh(ico(0.32, 1), M(0xffd27a), 0, 1.1, 0.5));
-  free.add(mesh(new THREE.ConeGeometry(0.12, 0.35, 5), M(0xffffff), 0.14, 1.4, 0.45), mesh(new THREE.ConeGeometry(0.12, 0.35, 5), M(0xffffff), -0.14, 1.4, 0.45));
+  const gold = miniDrake(0xffb23e, 0xffe3a8, 0xff8a3e, 0xffffff); gold.scale.setScalar(1.55); free.add(gold);
+  free.add(glowSprite(0xffd860, 5.0, 0.45).translateY(1.2));
   g.userData.crystal = crystal; g.userData.free = free;
   return g;
 }
@@ -269,53 +293,90 @@ export function makeWick() {
 
 export function makePortal(color, label, sub = '') {
   const g = new THREE.Group();
-  const ring = mesh(new THREE.TorusGeometry(1.5, 0.14, 8, 28), B(color)); ring.position.y = 1.9; g.add(ring);
-  const disc = mesh(new THREE.CircleGeometry(1.45, 28), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.35, side: THREE.DoubleSide, depthWrite: false })); disc.position.y = 1.9; g.add(disc);
-  const inner = mesh(new THREE.TorusGeometry(0.9, 0.06, 6, 20), B(0xffffff)); inner.position.y = 1.9; g.add(inner);
-  g.add(mesh(new THREE.CylinderGeometry(0.3, 0.45, 0.5, 8), M(0x5b4a78), -1.5, 0.25, 0), mesh(new THREE.CylinderGeometry(0.3, 0.45, 0.5, 8), M(0x5b4a78), 1.5, 0.25, 0));
+  const stone = M(0x6c6480), stone2 = M(0x8a82a2), dark = M(0x4a4262), gold = M(0xffd36a);
+  g.add(mesh(new THREE.CylinderGeometry(3.0, 3.3, 0.34, 10), dark, 0, 0.17, 0), mesh(new THREE.CylinderGeometry(2.5, 2.8, 0.26, 10), stone, 0, 0.47, 0));
+  const runes = mesh(new THREE.TorusGeometry(2.15, 0.07, 5, 24).rotateX(Math.PI / 2), B(color), 0, 0.62, 0); g.add(runes);
+  for (let i = 0; i < 8; i++) { const a = (i / 8) * Math.PI * 2; const m = mesh(new THREE.BoxGeometry(0.26, 0.05, 0.1), B(color), Math.cos(a) * 2.45, 0.61, Math.sin(a) * 2.45); m.rotation.y = -a; g.add(m); }
+  const R = 2.0, cy = 2.9;
+  for (const s of [-1, 1]) {
+    g.add(mesh(new THREE.BoxGeometry(1.3, 0.55, 1.3), dark, s * (R + 0.35), 0.8, 0));
+    g.add(mesh(new THREE.CylinderGeometry(0.42, 0.55, 4.0, 8), stone2, s * (R + 0.35), 2.8, 0));
+    g.add(mesh(new THREE.CylinderGeometry(0.6, 0.45, 0.32, 8), stone, s * (R + 0.35), 4.9, 0), mesh(new THREE.BoxGeometry(1.2, 0.22, 1.2), stone, s * (R + 0.35), 5.15, 0));
+    g.add(mesh(new THREE.ConeGeometry(0.3, 0.8, 5), B(color), s * (R + 0.35), 5.7, 0));
+    g.add(mesh(new THREE.TorusGeometry(0.46, 0.05, 5, 10).rotateX(Math.PI / 2), gold, s * (R + 0.35), 2.2, 0));
+  }
+  const ring = mesh(new THREE.TorusGeometry(R, 0.2, 8, 36), gold, 0, cy, 0); g.add(ring);
+  const glowRing = mesh(new THREE.TorusGeometry(R - 0.2, 0.09, 6, 36), B(color), 0, cy, 0); g.add(glowRing);
+  const disc = mesh(new THREE.CircleGeometry(R - 0.25, 32), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.35, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending }), 0, cy, 0); g.add(disc);
+  const swirls = [];
+  for (let i = 0; i < 3; i++) { const sw = mesh(new THREE.TorusGeometry(0.5 + i * 0.45, 0.04, 4, 24, Math.PI * 1.4), B(i % 2 ? 0xffffff : color), 0, cy, 0.02); g.add(sw); swirls.push(sw); }
+  const halo = glowSprite(color, 6.0, 0.45); halo.position.y = cy; g.add(halo);
+  const motes = [];
+  for (let i = 0; i < 10; i++) { const m = glowSprite(color, 0.28, 0.9); g.add(m); motes.push({ m, a: Math.random() * 6.28, o: Math.random(), r: 0.6 + Math.random() * 1.2 }); }
   const c = document.createElement('canvas'); c.width = 512; c.height = 160;
   const x = c.getContext('2d'); x.textAlign = 'center'; x.fillStyle = '#fff'; x.shadowColor = '#000'; x.shadowBlur = 8;
   x.font = 'bold 54px system-ui, sans-serif'; x.fillText(label, 256, 70);
   if (sub) { x.font = '600 36px system-ui, sans-serif'; x.fillStyle = '#ffe27a'; x.fillText(sub, 256, 124); }
   const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false }));
-  spr.scale.set(4.6, 1.44, 1); spr.position.y = 4.1; g.add(spr);
-  g.userData.spin = (t) => { ring.rotation.z = t * 0.8; inner.rotation.z = -t * 1.6; disc.material.opacity = 0.3 + Math.sin(t * 3) * 0.08; };
+  spr.scale.set(5.4, 1.7, 1); spr.position.y = 7.3; g.add(spr);
+  g.userData.spin = (t) => {
+    swirls.forEach((s, i) => { s.rotation.z = t * (i % 2 ? -1.4 : 1.1) + i; }); disc.material.opacity = 0.3 + Math.sin(t * 3) * 0.08; halo.material.opacity = 0.4 + Math.sin(t * 2.2) * 0.1;
+    runes.material.color.setHex(color); motes.forEach((m) => { const f = ((t * 0.35 + m.o) % 1), a = m.a + t * 0.8; m.m.position.set(Math.cos(a) * m.r, cy - 1.4 + f * 3.0, Math.sin(a) * 0.3); m.m.material.opacity = 0.9 * Math.sin(f * Math.PI); });
+  };
   g.userData.label = spr;
   return g;
 }
 
 export function makeSunstone() {
   const g = new THREE.Group();
-  const core = mesh(ico(0.34, 1), B(0xffd23e)); core.scale.set(0.85, 1.2, 0.85); g.add(core);
-  const shell = mesh(ico(0.46, 1), new THREE.MeshBasicMaterial({ color: 0xffa23e, transparent: true, opacity: 0.35, wireframe: true })); shell.scale.set(0.85, 1.2, 0.85); g.add(shell);
-  const c = document.createElement('canvas'); c.width = c.height = 64;
-  const x = c.getContext('2d'); const gr = x.createRadialGradient(32, 32, 0, 32, 32, 32);
-  gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.35, 'rgba(255,255,255,0.4)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
-  x.fillStyle = gr; x.fillRect(0, 0, 64, 64);
-  const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), color: 0xffc860, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }));
-  halo.scale.setScalar(2.2); g.add(halo);
-  g.userData.spin = (t) => { core.rotation.y = t * 2; shell.rotation.y = -t * 1.4; halo.scale.setScalar(2.1 + Math.sin(t * 4) * 0.25); };
+  const core = mesh(jit(ico(0.42, 1), 0.1, 3), B(0xffd23e), 0, 0, 0); core.scale.set(0.8, 1.25, 0.8); g.add(core);
+  const hot = mesh(ico(0.22, 1), B(0xfff6c0), 0, 0, 0); g.add(hot);
+  const shell = mesh(jit(ico(0.6, 1), 0.12, 5), new THREE.MeshBasicMaterial({ color: 0xffa23e, transparent: true, opacity: 0.38, wireframe: true }), 0, 0, 0); shell.scale.set(0.82, 1.2, 0.82); g.add(shell);
+  const shards = [];
+  for (let i = 0; i < 5; i++) { const s = mesh(new THREE.OctahedronGeometry(0.1, 0), B(i % 2 ? 0xffe27a : 0xffb23e), 0, 0, 0); g.add(s); shards.push(s); }
+  const halo = glowSprite(0xffc860, 3.2, 0.7); g.add(halo);
+  const rays = glowSprite(0xfff2b0, 1.6, 0.5); g.add(rays);
+  g.scale.setScalar(1.35);
+  g.userData.spin = (t) => {
+    core.rotation.y = t * 2; shell.rotation.y = -t * 1.4; shell.rotation.x = Math.sin(t) * 0.2;
+    shards.forEach((s, i) => { const a = t * 1.8 + i * 1.256; s.position.set(Math.cos(a) * 0.62, Math.sin(t * 2 + i) * 0.35, Math.sin(a) * 0.62); s.rotation.set(t * 3, t * 2, 0); });
+    halo.scale.setScalar(3.0 + Math.sin(t * 4) * 0.35); rays.material.opacity = 0.4 + Math.sin(t * 7) * 0.15;
+  };
   return g;
 }
 
 export function makeVent(r, h) {
   const g = new THREE.Group();
-  g.add(mesh(new THREE.CylinderGeometry(r * 0.9, r, 0.25, 14), M(0x6f8aa8), 0, 0.12, 0));
-  const rings = [];
-  for (let i = 0; i < 5; i++) {
-    const ring = mesh(new THREE.TorusGeometry(r * 0.8, 0.07, 5, 18).rotateX(Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xbff4ff, transparent: true, opacity: 0.6, depthWrite: false }), 0, 0, 0);
-    g.add(ring); rings.push(ring);
-  }
-  g.userData.spin = (t) => { rings.forEach((rg, i) => { const f = ((t * 0.5 + i / 5) % 1); rg.position.y = 0.3 + f * h; const s = 1 - f * 0.4; rg.scale.set(s, 1, s); rg.material.opacity = 0.7 * (1 - f); }); };
+  const stone = M(0x6f8aa8), dark = M(0x2f3a52);
+  g.add(mesh(new THREE.CylinderGeometry(r * 1.0, r * 1.15, 0.3, 14), stone, 0, 0.15, 0), mesh(new THREE.TorusGeometry(r * 0.92, 0.1, 5, 18).rotateX(Math.PI / 2), M(0xa8c4e0), 0, 0.32, 0));
+  g.add(mesh(new THREE.CircleGeometry(r * 0.85, 16).rotateX(-Math.PI / 2), dark, 0, 0.31, 0));
+  for (let i = -3; i <= 3; i++) g.add(mesh(new THREE.BoxGeometry(r * 1.6 * Math.cos(Math.asin(Math.min(0.99, Math.abs(i) / 3.6))), 0.04, 0.09), M(0x8aa6c8), 0, 0.34, i * r * 0.22));
+  const col = mesh(new THREE.CylinderGeometry(r * 0.9, r * 1.0, h, 16, 1, true), new THREE.MeshBasicMaterial({ color: 0xbff4ff, transparent: true, opacity: 0.1, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending }), 0, h / 2 + 0.3, 0); g.add(col);
+  const rings = [], streaks = [];
+  for (let i = 0; i < 6; i++) { const ring = mesh(new THREE.TorusGeometry(r * 0.8, 0.06, 5, 20).rotateX(Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xeaffff, transparent: true, opacity: 0.6, depthWrite: false }), 0, 0, 0); g.add(ring); rings.push(ring); }
+  for (let i = 0; i < 10; i++) { const s = mesh(new THREE.BoxGeometry(0.05, 0.9, 0.05), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.6, depthWrite: false }), 0, 0, 0); g.add(s); streaks.push({ m: s, a: (i / 10) * Math.PI * 2, o: Math.random() }); }
+  const glow = glowSprite(0xbff4ff, r * 2.6, 0.5); glow.position.y = 0.6; g.add(glow);
+  g.userData.spin = (t) => {
+    rings.forEach((rg, i) => { const f = ((t * 0.5 + i / 6) % 1); rg.position.y = 0.4 + f * h; const s = 1 - f * 0.35; rg.scale.set(s, 1, s); rg.material.opacity = 0.7 * Math.sin(f * Math.PI); });
+    streaks.forEach((s) => { const f = ((t * 0.7 + s.o) % 1), a = s.a + t * 1.6 + f * 2.5, rr = r * (0.75 - f * 0.25); s.m.position.set(Math.cos(a) * rr, 0.5 + f * h, Math.sin(a) * rr); s.m.material.opacity = 0.7 * Math.sin(f * Math.PI); });
+    glow.material.opacity = 0.4 + Math.sin(t * 5) * 0.1;
+  };
   return g;
 }
 
 export function makeSpring() {
   const g = new THREE.Group();
-  g.add(mesh(new THREE.CylinderGeometry(0.62, 0.7, 0.18, 10), M(0x5b4a78), 0, 0.09, 0));
-  const top = mesh(new THREE.CylinderGeometry(0.56, 0.56, 0.14, 10), M(0xff6a9b), 0, 0.42, 0); g.add(top);
-  const coil = mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.26, 8), M(0xffd23e), 0, 0.26, 0); g.add(coil);
+  const stone = M(0x6c6480), dark = M(0x4a4262), metal = M(0xc8ccd8), rim = M(0xffd23e);
+  g.add(mesh(new THREE.CylinderGeometry(0.85, 0.95, 0.22, 10), dark, 0, 0.11, 0), mesh(new THREE.CylinderGeometry(0.7, 0.82, 0.18, 10), stone, 0, 0.3, 0));
+  const coil = new THREE.Group(); coil.position.y = 0.38; g.add(coil);
+  for (let i = 0; i < 5; i++) { const t = mesh(new THREE.TorusGeometry(0.34, 0.06, 5, 12).rotateX(Math.PI / 2), metal, 0, 0.09 + i * 0.12, 0); t.rotation.y = i * 0.6; coil.add(t); }
+  coil.add(mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.8, 5), M(0x8a8fa0), 0, 0.35, 0));
+  const top = new THREE.Group(); top.position.y = 1.0; g.add(top);
+  top.add(mesh(new THREE.CylinderGeometry(0.72, 0.66, 0.2, 12), M(0xff5a8f), 0, 0, 0), mesh(new THREE.TorusGeometry(0.7, 0.07, 5, 16).rotateX(Math.PI / 2), rim, 0, 0.06, 0));
+  for (let i = 0; i < 3; i++) top.add(mesh(new THREE.ConeGeometry(0.2 - i * 0.04, 0.18, 4), B(0xfff2a0), 0, 0.14 + i * 0.12, 0));
+  const glow = glowSprite(0xff7aa8, 1.6, 0.45); glow.position.y = 1.0; g.add(glow);
   g.userData.top = top; g.userData.coil = coil;
+  g.userData.setSquash = (sq, t = 0) => { top.position.y = 1.0 - sq * 0.55; coil.scale.y = 1 - sq * 0.62; glow.material.opacity = 0.3 + sq * 0.5 + Math.sin(t * 4) * 0.08; };
   return g;
 }
 
@@ -442,8 +503,16 @@ export function makeGate(w, h, d) {
 
 export function makeSpikes(w, d) {
   const g = new THREE.Group();
-  const nx = Math.max(1, Math.round(w / 0.7)), nz = Math.max(1, Math.round(d / 0.7));
-  for (let i = 0; i < nx; i++) for (let j = 0; j < nz; j++) g.add(mesh(new THREE.ConeGeometry(0.15, 0.7, 5), M(0xc7cbd9), (i / nx - 0.5 + 0.5 / nx) * w, 0.35, (j / nz - 0.5 + 0.5 / nz) * d));
+  g.add(mesh(new THREE.BoxGeometry(w + 0.5, 0.16, d + 0.5), M(0x4a4262), 0, 0.08, 0));
+  g.add(mesh(new THREE.BoxGeometry(w + 0.2, 0.2, d + 0.2), M(0x2e2a3c), 0, 0.14, 0));
+  const nx = Math.max(2, Math.round(w / 0.55)), nz = Math.max(2, Math.round(d / 0.55));
+  const sm = M(0xcfd3e2), tip = new THREE.MeshBasicMaterial({ color: 0xff7a3a });
+  for (let i = 0; i < nx; i++) for (let j = 0; j < nz; j++) {
+    const x = (i / (nx - 1) - 0.5) * w * 0.94, z = (j / (nz - 1) - 0.5) * d * 0.94, hh = 0.75 + 0.2 * Math.abs(Math.sin(i * 3.1 + j * 1.7));
+    const sp = mesh(new THREE.ConeGeometry(0.14, hh, 5), sm, x, 0.2 + hh / 2, z); sp.rotation.set(Math.sin(i + j * 2) * 0.07, 0, Math.cos(i * 2 + j) * 0.07); g.add(sp);
+    g.add(mesh(new THREE.ConeGeometry(0.06, 0.28, 5), tip, x, 0.2 + hh - 0.1, z));
+  }
+  g.add(glowSprite(0xff7a3a, Math.max(w, d) * 1.1, 0.12).translateY(0.5));
   return g;
 }
 
@@ -451,36 +520,51 @@ export function makeSpikes(w, d) {
 export function makeFlightRing(r) {
   const g = new THREE.Group();
   const mat = new THREE.MeshBasicMaterial({ color: 0x6ff5ff });
-  const tor = mesh(new THREE.TorusGeometry(r, 0.22, 8, 36), mat); g.add(tor);
-  const disc = mesh(new THREE.CircleGeometry(r, 28), new THREE.MeshBasicMaterial({ color: 0x6ff5ff, transparent: true, opacity: 0.12, side: THREE.DoubleSide, depthWrite: false })); g.add(disc);
-  const inner = mesh(new THREE.TorusGeometry(r * 0.7, 0.07, 6, 28), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5 })); g.add(inner);
-  g.userData.tick = (t) => { inner.rotation.z = t * 0.9; disc.material.opacity = 0.1 + Math.sin(t * 3) * 0.04; };
-  g.userData.hit = () => { mat.color.setHex(0xffd23e); disc.material.color.setHex(0xffd23e); inner.visible = false; };
-  g.userData.miss = () => { mat.color.setHex(0x8a8aa0); disc.visible = false; inner.visible = false; };
+  const tor = mesh(new THREE.TorusGeometry(r, 0.24, 8, 40), mat); g.add(tor);
+  const outer = mesh(new THREE.TorusGeometry(r + 0.3, 0.06, 6, 40), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5 })); g.add(outer);
+  const disc = mesh(new THREE.CircleGeometry(r, 28), new THREE.MeshBasicMaterial({ color: 0x6ff5ff, transparent: true, opacity: 0.12, side: THREE.DoubleSide, depthWrite: false }), 0, 0, 0); g.add(disc);
+  const beads = [];
+  for (let i = 0; i < 16; i++) { const a = (i / 16) * Math.PI * 2; const b = mesh(ico(0.2, 1), B(0xffffff), Math.cos(a) * (r + 0.55), Math.sin(a) * (r + 0.55), 0); g.add(b); beads.push(b); }
+  const halo = glowSprite(0x6ff5ff, r * 3.2, 0.3); g.add(halo);
+  let state = 0;
+  g.userData.tick = (t) => { disc.material.opacity = 0.1 + Math.sin(t * 3) * 0.04; beads.forEach((b, i) => { const k = 0.5 + 0.5 * Math.sin(t * 5 - i * 0.55); b.scale.setScalar(state === 2 ? 0.5 : 0.6 + k * 0.6); }); outer.rotation.z = t * 0.4; };
+  g.userData.hit = () => { state = 1; mat.color.setHex(0xffd23e); disc.material.color.setHex(0xffd23e); halo.material.color.setHex(0xffd23e); beads.forEach((b) => b.material.color.setHex(0xfff2a0)); };
+  g.userData.miss = () => { state = 2; mat.color.setHex(0x8a8aa0); disc.visible = false; halo.visible = false; beads.forEach((b) => b.material.color.setHex(0x8a8aa0)); };
   return g;
 }
 
 export function makeFlightTarget(heavy) {
   const g = new THREE.Group();
   if (!heavy) {
-    const body = mesh(ico(0.8, 1), new THREE.MeshLambertMaterial({ color: 0xff7a4a, emissive: 0x662200, flatShading: true }), 0, 0, 0); body.scale.set(1, 1.2, 1); g.add(body);
-    const glow = mesh(ico(0.55, 1), B(0xffd36a)); glow.scale.set(1, 1.2, 1); g.add(glow);
-    g.add(mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.2, 8), M(0x5b3a1a), 0, 1.05, 0));
-    g.add(mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.2, 8), M(0x5b3a1a), 0, -1.05, 0));
+    // a ribbed paper lantern with gold caps and a tassel
+    const paper = new THREE.MeshLambertMaterial({ color: 0xff6a3a, emissive: 0x7a2a10, flatShading: true });
+    const body = mesh(jit(ico(0.85, 1), 0.05, 4), paper, 0, 0, 0); body.scale.set(1, 1.2, 1); g.add(body);
+    const inner = mesh(ico(0.6, 1), B(0xffd36a), 0, 0, 0); inner.scale.set(1, 1.2, 1); inner.material.transparent = true; inner.material.opacity = 0.85; g.add(inner);
+    for (const y of [-0.5, 0, 0.5]) g.add(mesh(new THREE.TorusGeometry(0.82 - Math.abs(y) * 0.28, 0.025, 4, 14).rotateX(Math.PI / 2), M(0xffd36a), 0, y * 1.2, 0));
+    g.add(mesh(new THREE.CylinderGeometry(0.34, 0.4, 0.2, 8), M(0xffd36a), 0, 1.05, 0), mesh(new THREE.CylinderGeometry(0.4, 0.3, 0.2, 8), M(0xffd36a), 0, -1.05, 0));
+    const tas = mesh(new THREE.ConeGeometry(0.12, 0.4, 6), M(0xff3a3a), 0, -1.78, 0); tas.rotation.x = Math.PI;
+    g.add(mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.5, 4), M(0x8a2a1a), 0, -1.4, 0), tas);
+    g.add(mesh(new THREE.TorusGeometry(0.18, 0.025, 4, 10), M(0xffd36a), 0, 1.3, 0));
+    g.add(glowSprite(0xffa040, 3.2, 0.55));
   } else {
-    g.add(mesh(ico(1.3, 1), M(0x8794ad), 0, 0, 0));
-    for (let i = 0; i < 8; i++) { const a = (i / 8) * 6.283; const sp = mesh(new THREE.ConeGeometry(0.2, 0.7, 5), M(0xd8dde8), Math.cos(a) * 1.35, Math.sin(a * 2) * 0.5, Math.sin(a) * 1.35); sp.lookAt(Math.cos(a) * 3, Math.sin(a * 2) * 1.2, Math.sin(a) * 3); sp.rotateX(Math.PI / 2); g.add(sp); }
-    g.add(mesh(ico(0.5, 1), B(0xff8a3a), 0, 0, 0.8));
+    // an iron-bound lantern with spikes and a glowing slit: needs a longer flame
+    g.add(mesh(jit(ico(1.3, 1), 0.08, 6), M(0x8794ad), 0, 0, 0));
+    for (const y of [-0.6, 0.6]) g.add(mesh(new THREE.TorusGeometry(1.28 - Math.abs(y) * 0.28, 0.07, 5, 16).rotateX(Math.PI / 2), M(0x3d4458), 0, y, 0));
+    for (let i = 0; i < 8; i++) { const a = (i / 8) * Math.PI * 2; const sp = mesh(new THREE.ConeGeometry(0.2, 0.7, 5), M(0xd8dde8), Math.cos(a) * 1.35, Math.sin(a * 2) * 0.5, Math.sin(a) * 1.35); sp.lookAt(Math.cos(a) * 3, Math.sin(a * 2) * 1.2, Math.sin(a) * 3); sp.rotateX(Math.PI / 2); g.add(sp); }
+    g.add(mesh(new THREE.BoxGeometry(0.9, 0.16, 0.2), B(0xff8a3a), 0, 0, 1.28), glowSprite(0xff8a3a, 2.4, 0.4));
   }
   g.userData.spin = (t) => { g.rotation.y = t * 0.8; };
   return g;
 }
 
 export function makeFlightRock(r) {
+  // a small floating island: grassy top, jagged underside, a lone tree
   const g = new THREE.Group();
-  g.add(mesh(ico(r, 1), M(0x8f95a8), 0, 0, 0));
-  g.add(mesh(ico(r * 0.55, 0), M(0xb6bccd), r * 0.6, r * 0.3, 0));
-  g.add(mesh(new THREE.ConeGeometry(r * 0.45, r * 1.6, 5), M(0xaab0c4), 0, r * 1.1, 0));
+  const under = mesh(jit(new THREE.ConeGeometry(r * 1.0, r * 1.9, 7), r * 0.4, 5), M(0x8f95a8), 0, -r * 0.55, 0); under.rotation.x = Math.PI; g.add(under);
+  g.add(mesh(jit(ico(r * 0.7, 1), r * 0.3, 6), M(0xa4abbd), r * 0.35, -r * 0.1, r * 0.2));
+  g.add(mesh(new THREE.CylinderGeometry(r * 1.0, r * 0.9, r * 0.35, 9), M(0x5fcf72), 0, r * 0.35, 0));
+  g.add(mesh(new THREE.CylinderGeometry(0.1, 0.14, r * 0.8, 5), M(0x7a4f2e), r * 0.15, r * 0.9, 0), mesh(jit(new THREE.ConeGeometry(r * 0.55, r * 1.1, 6), 0.1, 7), M(0x2fae5a), r * 0.15, r * 1.55, 0));
+  for (let i = 0; i < 3; i++) { const sp = mesh(new THREE.ConeGeometry(0.1, 0.5, 4), M(0x7a8aa0), (i - 1) * r * 0.4, -r * 1.45 - i * 0.1, (i - 1) * r * 0.1); sp.rotation.x = Math.PI; g.add(sp); }
   return g;
 }
 

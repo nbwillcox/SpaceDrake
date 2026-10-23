@@ -108,7 +108,7 @@ export function buildSpec(def) {
     for (let i = 0; i <= cnt; i++) {
       const along = sg.ra + sg.run * (i / cnt), x = sg.A.x + sg.dx * along, z = sg.A.z + sg.dz * along;
       const top = lerp(sg.A.h, sg.B.h, i / cnt), hw = sg.w / 2;
-      spec.boxes.push({ min: [x - hw, top - 0.35, z - hw], max: [x + hw, top, z + hw], color: def.bridgeColor || 0xb98a55, edge: 0x7a5530, plank: true });
+      spec.boxes.push({ min: [x - hw, top - 0.35, z - hw], max: [x + hw, top, z + hw], color: def.bridgeColor || 0xb98a55, edge: 0x7a5530, plank: true, hidden: true });
     }
   }
   // ferries: a moving platform shuttling between two nodes of equal height
@@ -116,7 +116,7 @@ export function buildSpec(def) {
     if (sg.type !== 'ferry') continue;
     const mid = sg.ra + sg.run / 2, x = sg.A.x + sg.dx * mid, z = sg.A.z + sg.dz * mid, top = sg.A.h, hw = sg.w / 2;
     const amp = Math.max(0, sg.run / 2 - hw - 0.3);
-    spec.boxes.push({ min: [x - hw, top - 0.4, z - hw], max: [x + hw, top, z + hw], color: def.ferryColor || 0xe39a4b, edge: 0x8a4f1f, move: { amp: [sg.dx * amp, 0, sg.dz * amp], period: sg.L.period || 9, phase: 0 } });
+    spec.boxes.push({ min: [x - hw, top - 0.4, z - hw], max: [x + hw, top, z + hw], color: def.ferryColor || 0xe39a4b, edge: 0x8a4f1f, raft: true, move: { amp: [sg.dx * amp, 0, sg.dz * amp], period: sg.L.period || 9, phase: 0 } });
   }
   // vent columns attached to links
   for (const L of links) if (L.vent) spec.entities.push({ t: 'vent', x: L.vent.x, z: L.vent.z, r: L.vent.r || 2.4, h: L.vent.h, power: L.vent.power || 8.5 });

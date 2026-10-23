@@ -6,6 +6,7 @@ import { buildSpec } from './levelgen.js';
 import { makeWorld } from './levelfill.js';
 import { buildTerrainMesh, buildBoxMeshes } from './art/terrain.js';
 import { buildDecor } from './art/decor.js';
+import { buildBridges } from './art/bridges.js';
 import { createDragon } from './art/dragon.js';
 import { Fx } from './art/fx.js';
 import { Game } from './game.js';
@@ -50,6 +51,7 @@ export class Session {
     this.terrain = buildTerrainMesh(world, th); scene.add(this.terrain);
     this.boxGroup = new THREE.Group(); scene.add(this.boxGroup); buildBoxMeshes(world, this.boxGroup);
     scene.add(buildDecor(spec, th));
+    scene.add(buildBridges(spec, spec.def.bridgeColor));
     if (spec.liquid) {
       const cloud = spec.liquid.kind === 'cloud';
       const lc = spec.liquid.kind === 'lava' ? 0xff6a2a : cloud ? 0xf4f8ff : (th.water || 0x3fb8ff);
