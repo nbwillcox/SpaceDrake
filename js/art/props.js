@@ -10,20 +10,34 @@ const ico = (r, d = 0) => new THREE.IcosahedronGeometry(r, d);
 export const GEM_COLORS = { 1: 0xff4d6a, 2: 0x3ee07f, 5: 0x4da6ff, 10: 0xffd23e, 25: 0xd36bff };
 export const GEM_TIERS = [25, 10, 5, 2, 1];
 
-// A faceted brilliant-cut gem: flat table, flared crown, girdle, pavilion to a point.
-// Phong + per-instance tint, with an emissive lift so it glows in shade, and a specular glint as it spins.
+// A faceted gem: flat table, flared crown, girdle, pavilion to a point. Six sides so every facet reads clearly.
+// Facets are shaded by baked vertex colour (bright crown, mid girdle, deep pavilion, alternating sides) and the
+// instance colour tints them. No specular: it only produced stray white streaks. A little emissive keeps it glowing in shade.
 function gemGeometry() {
-  const pts = [[0, 0.36], [0.11, 0.36], [0.23, 0.24], [0.26, 0.16], [0.26, 0.12], [0.14, -0.08], [0, -0.34]].map(([r, y]) => new THREE.Vector2(r, y));
-  const g = new THREE.LatheGeometry(pts, 8);
-  g.rotateY(Math.PI / 8);
+  const pts = [[0, 0.4], [0.12, 0.4], [0.27, 0.26], [0.3, 0.17], [0.3, 0.12], [0.15, -0.1], [0, -0.38]].map(([r, y]) => new THREE.Vector2(r, y));
+  let g = new THREE.LatheGeometry(pts, 6);
+  g = g.toNonIndexed();
+  const pos = g.attributes.position, col = new Float32Array(pos.count * 3), n = new THREE.Vector3(), a = new THREE.Vector3(), b = new THREE.Vector3(), c = new THREE.Vector3();
+  for (let i = 0; i < pos.count; i += 3) {
+    a.fromBufferAttribute(pos, i); b.fromBufferAttribute(pos, i + 1); c.fromBufferAttribute(pos, i + 2);
+    n.crossVectors(b.clone().sub(a), c.clone().sub(a)).normalize();
+    const cy = (a.y + b.y + c.y) / 3, ang = Math.atan2((a.x + b.x + c.x) / 3, (a.z + b.z + c.z) / 3);
+    const side = Math.floor(((ang + Math.PI) / (Math.PI * 2)) * 6 + 0.01) % 2 ? 0.9 : 1.08;
+    let k = cy > 0.25 ? 1.35 : cy > 0.1 ? 1.08 : cy > -0.1 ? 0.88 : 0.7;
+    k *= side;
+    for (let j = 0; j < 3; j++) { col[(i + j) * 3] = k; col[(i + j) * 3 + 1] = k; col[(i + j) * 3 + 2] = k; }
+  }
+  g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  g.computeVertexNormals();
+  g.scale(1.15, 1.15, 1.15);
   return g;
 }
 
 export function makeGemInstances(count) {
   const g = gemGeometry();
-  const m = new THREE.MeshPhongMaterial({ color: 0xffffff, flatShading: true, shininess: 120, specular: 0xffffff });
+  const m = new THREE.MeshLambertMaterial({ color: 0xffffff, flatShading: true, vertexColors: true });
   m.onBeforeCompile = (sh) => {
-    sh.fragmentShader = sh.fragmentShader.replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n totalEmissiveRadiance += vColor * 0.42;');
+    sh.fragmentShader = sh.fragmentShader.replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n totalEmissiveRadiance += vColor * 0.5;');
   };
   const im = new THREE.InstancedMesh(g, m, count);
   im.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
