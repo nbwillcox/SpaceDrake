@@ -1,5 +1,6 @@
 // Procedural props and creatures (all primitives, flat shaded).
 import * as THREE from 'three';
+import { T, Bm, ico as kico, sph, cone as kcone, ink, eye as keye, bake } from './kit.js';
 
 const M = (c, o = {}) => new THREE.MeshLambertMaterial(Object.assign({ color: c, flatShading: true }, o));
 const B = (c, o = {}) => new THREE.MeshBasicMaterial(Object.assign({ color: c }, o));
@@ -9,9 +10,21 @@ const ico = (r, d = 0) => new THREE.IcosahedronGeometry(r, d);
 export const GEM_COLORS = { 1: 0xff4d6a, 2: 0x3ee07f, 5: 0x4da6ff, 10: 0xffd23e, 25: 0xd36bff };
 export const GEM_TIERS = [25, 10, 5, 2, 1];
 
+// A faceted brilliant-cut gem: flat table, flared crown, girdle, pavilion to a point.
+// Phong + per-instance tint, with an emissive lift so it glows in shade, and a specular glint as it spins.
+function gemGeometry() {
+  const pts = [[0, 0.36], [0.11, 0.36], [0.23, 0.24], [0.26, 0.16], [0.26, 0.12], [0.14, -0.08], [0, -0.34]].map(([r, y]) => new THREE.Vector2(r, y));
+  const g = new THREE.LatheGeometry(pts, 8);
+  g.rotateY(Math.PI / 8);
+  return g;
+}
+
 export function makeGemInstances(count) {
-  const g = new THREE.OctahedronGeometry(0.26, 0); g.scale(1, 1.45, 1);
-  const m = new THREE.MeshBasicMaterial({ color: 0xffffff });
+  const g = gemGeometry();
+  const m = new THREE.MeshPhongMaterial({ color: 0xffffff, flatShading: true, shininess: 120, specular: 0xffffff });
+  m.onBeforeCompile = (sh) => {
+    sh.fragmentShader = sh.fragmentShader.replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n totalEmissiveRadiance += vColor * 0.42;');
+  };
   const im = new THREE.InstancedMesh(g, m, count);
   im.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
   im.frustumCulled = false;
@@ -78,38 +91,84 @@ export function makeElder() {
 
 export { makeEnemy } from './enemies.js';
 
+// Glowmoth: fuzzy body, antennae, and two scalloped wing pairs with a cool-to-violet edge.
+let mothWing = null;
+function mothWingGeometry() {
+  if (mothWing) return mothWing;
+  const root = new THREE.Color(0xe8fdff), mid = new THREE.Color(0x7be8ff), edge = new THREE.Color(0xb48cff);
+  const pos = [], col = [];
+  const tri = (a, ca, b, cb, c, cc) => { for (const [v, cl] of [[a, ca], [b, cb], [c, cc]]) { pos.push(...v); col.push(cl.r, cl.g, cl.b); } };
+  const O = [0, 0, 0.0];
+  // forewing: leading edge swept forward, scalloped outer edge
+  const fore = [[0.16, 0.01, 0.17], [0.3, 0.02, 0.14], [0.37, 0.02, 0.05], [0.34, 0.0, -0.05], [0.2, 0, -0.04]];
+  for (let i = 0; i < fore.length - 1; i++) tri(O, root, fore[i], i % 2 ? edge : mid, fore[i + 1], (i + 1) % 2 ? edge : mid);
+  // hindwing: shorter, rounder, tucked behind
+  const hind = [[0.2, 0, -0.05], [0.3, 0, -0.14], [0.24, 0, -0.24], [0.12, 0, -0.26], [0.04, 0, -0.14]];
+  for (let i = 0; i < hind.length - 1; i++) tri(O, root, hind[i], i % 2 ? mid : edge, hind[i + 1], (i + 1) % 2 ? mid : edge);
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  mothWing = g;
+  return g;
+}
+
 export function makeMoth() {
   const g = new THREE.Group();
-  const m = new THREE.MeshBasicMaterial({ color: 0x8ff7ff, side: THREE.DoubleSide, transparent: true, opacity: 0.9 });
-  const geo = new THREE.BufferGeometry();
-  geo.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0, 0.32, 0.12, 0.1, 0.28, 0.0, -0.18], 3));
+  const wingMat = new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide, transparent: true, opacity: 0.92 });
+  const geo = mothWingGeometry();
   const wl = new THREE.Group(), wr = new THREE.Group();
-  const a = new THREE.Mesh(geo, m), b = new THREE.Mesh(geo, m); b.scale.x = -1;
-  wl.add(a); wr.add(b); g.add(wl, wr);
-  g.add(mesh(ico(0.07), B(0xffffff)));
+  wl.add(new THREE.Mesh(geo, wingMat));
+  const mirror = new THREE.Mesh(geo, wingMat); mirror.scale.x = -1; wr.add(mirror);
+  g.add(wl, wr);
+  // body, head and antennae merged into one mesh
+  const fur = Bm(0xffffff), dark = Bm(0x3a3a66);
+  const thorax = mesh(ico(0.07, 1), fur, 0, 0, 0.02); thorax.scale.set(0.9, 0.9, 1.3);
+  const head = mesh(ico(0.045, 1), fur, 0, 0.01, 0.13);
+  const body = new THREE.Group(); body.add(thorax, head, mesh(ico(0.012, 0), dark, 0.03, 0.03, 0.17), mesh(ico(0.012, 0), dark, -0.03, 0.03, 0.17));
+  for (const s of [-1, 1]) { const a = mesh(kcone(0.006, 0.16, 3), dark, 0.05 * s, 0.1, 0.2); a.rotation.set(-0.9, 0, -0.5 * s); body.add(a); }
+  g.add(bake(body)); 
   g.userData.wl = wl; g.userData.wr = wr;
   return g;
 }
 
 export function makeBolt() { return mesh(ico(0.16, 1), B(0xff5fb0)); }
 
+// Wick: a firefly. The glowing abdomen ("core") and halo are recoloured by the game to show health.
 export function makeWick() {
   const g = new THREE.Group();
-  const core = mesh(ico(0.09, 1), B(0xffe27a)); g.add(core);
+  const core = mesh(ico(0.1, 2), B(0xffe27a), 0, -0.025, -0.08); core.scale.set(0.95, 0.9, 1.3); g.add(core);
+  // dark thorax, head, antennae and legs (merged)
+  const shell = T(0x6a5ea0), horn = T(0x4a4078);
+  const parts = new THREE.Group();
+  const thorax = mesh(kico(0.055, 1), shell, 0, 0.0, 0.05); thorax.scale.set(1, 0.9, 1.1);
+  const head = mesh(kico(0.04, 1), shell, 0, 0.005, 0.12);
+  parts.add(ink(thorax, 0.12), ink(head, 0.14));
+  for (const s of [-1, 1]) {
+    parts.add(mesh(sph(0.016, 6, 5), Bm(0xffffff), 0.026 * s, 0.025, 0.15), mesh(sph(0.008, 5, 4), Bm(0x111122), 0.026 * s, 0.025, 0.162));
+    const an = mesh(kcone(0.005, 0.12, 3), horn, 0.03 * s, 0.07, 0.17); an.rotation.set(-1.0, 0, -0.45 * s); parts.add(an);
+    for (const z of [0.0, 0.05]) { const lg = mesh(kcone(0.005, 0.07, 3), horn, 0.04 * s, -0.045, z); lg.rotation.z = 0.7 * s; parts.add(lg); }
+  }
+  g.add(bake(parts));
   const c = document.createElement('canvas'); c.width = c.height = 64;
   const x = c.getContext('2d'); const gr = x.createRadialGradient(32, 32, 0, 32, 32, 32);
   gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.3, 'rgba(255,255,255,0.45)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
   x.fillStyle = gr; x.fillRect(0, 0, 64, 64);
   const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), color: 0xffd860, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }));
-  halo.scale.setScalar(0.9); g.add(halo);
-  const wing = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 0.1), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.6, side: THREE.DoubleSide }));
-  const wl = wing.clone(); wl.position.set(0.11, 0.05, 0); const wr = wing.clone(); wr.position.set(-0.11, 0.05, 0);
+  halo.position.z = -0.05; halo.scale.setScalar(0.9); g.add(halo);
+  // veined wings that flap about their root (the game rotates wl/wr around z)
+  const wingGeo = new THREE.BufferGeometry();
+  wingGeo.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0, 0.16, 0.1, 0.02, 0.26, 0.06, -0.02, 0.22, 0.0, -0.06, 0.08, -0.01, -0.04], 3));
+  wingGeo.setIndex([0, 1, 2, 0, 2, 3, 0, 3, 4]);
+  const wm = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.55, side: THREE.DoubleSide });
+  const wl = new THREE.Group(), wr = new THREE.Group();
+  wl.position.set(0.03, 0.045, 0.02); wr.position.set(-0.03, 0.045, 0.02);
+  wl.add(new THREE.Mesh(wingGeo, wm));
+  const mw = new THREE.Mesh(wingGeo, wm); mw.scale.x = -1; wr.add(mw);
   g.add(wl, wr);
   g.userData = { core, halo, wl, wr };
   return g;
 }
 
-// A swirling portal ring with a floating label.
 export function makePortal(color, label, sub = '') {
   const g = new THREE.Group();
   const ring = mesh(new THREE.TorusGeometry(1.5, 0.14, 8, 28), B(color)); ring.position.y = 1.9; g.add(ring);

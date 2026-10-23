@@ -1,6 +1,7 @@
 // Moss Golem: 3-phase boss. Slam -> dizzy (hit it) ; phase 2 adds falling boulders ; phase 3 adds a spin sweep.
 // Teaches: jump over shockwaves, charge a dizzy enemy, dodge telegraphed attacks. No instant kills.
 import * as THREE from 'three';
+import { buildGolemArt } from './art/bosses.js';
 
 const TAU = Math.PI * 2;
 const M = (c, o = {}) => new THREE.MeshLambertMaterial(Object.assign({ color: c, flatShading: true }, o));
@@ -24,29 +25,9 @@ export class GolemBoss {
   }
 
   _build() {
-    const stone = M(0x8b919e), stone2 = M(0x727886), moss = M(0x4fb860), mossD = M(0x3a9a4c), eyeM = B(0xffb23e), coreM = B(0xffc24a);
-    const root = this.root = new THREE.Group();
-    const body = this.body = new THREE.Group(); root.add(body);
-    const torso = mesh(ico(2.1, 1), stone, 0, 2.6, 0); torso.scale.set(1.15, 1.05, 0.95); body.add(torso);
-    body.add(mesh(ico(1.1, 1), moss, -0.5, 4.0, -0.7), mesh(ico(0.8, 1), mossD, 0.9, 3.7, -0.8), mesh(ico(0.6, 0), moss, 1.5, 3.0, 0.4));
-    const head = this.head = new THREE.Group(); head.position.set(0, 4.6, 0.6); body.add(head);
-    head.add(mesh(ico(1.1, 1), stone2));
-    head.add(mesh(ico(0.35, 0), eyeM, 0.42, 0.18, 0.92), mesh(ico(0.35, 0), eyeM, -0.42, 0.18, 0.92));
-    head.add(mesh(new THREE.BoxGeometry(0.9, 0.22, 0.25), M(0x30343c), 0, -0.4, 1.0));
-    for (let i = 0; i < 5; i++) head.add(mesh(new THREE.ConeGeometry(0.2, 0.9, 5), i % 2 ? moss : mossD, (i - 2) * 0.35, 1.2, -0.2));
-    const core = this.core = mesh(ico(0.6, 1), coreM, 0, 2.7, 1.55); body.add(core);
-    const halo = this.halo = mesh(ico(0.95, 1), new THREE.MeshBasicMaterial({ color: 0xffb23e, transparent: true, opacity: 0.25, depthWrite: false }), 0, 2.7, 1.55); body.add(halo);
-    // arms with big fists
-    this.arms = [];
-    for (const s of [-1, 1]) {
-      const sh = new THREE.Group(); sh.position.set(2.2 * s, 3.4, 0); body.add(sh);
-      sh.add(mesh(ico(0.8, 1), stone, 0.3 * s, -0.8, 0.2));
-      const fist = mesh(ico(1.25, 1), stone2, 0.4 * s, -2.1, 0.6); sh.add(fist);
-      sh.add(mesh(ico(0.5, 0), moss, 0.5 * s, -1.7, 0.2));
-      this.arms.push(sh);
-    }
-    // legs
-    root.add(mesh(ico(1.1, 1), stone2, -1.2, 0.7, 0), mesh(ico(1.1, 1), stone2, 1.2, 0.7, 0));
+    const art = buildGolemArt();
+    const root = this.root = art.root;
+    this.body = art.body; this.head = art.head; this.core = art.core; this.halo = art.halo; this.arms = art.arms;
     // telegraph ring + shock ring (flat)
     this.shock = mesh(new THREE.TorusGeometry(1, 0.28, 6, 40).rotateX(Math.PI / 2), B(0xffe27a), 0, 0.2, 0); this.shock.visible = false; this.game.group.add(this.shock);
     this.tel = mesh(new THREE.RingGeometry(0.2, 1, 36).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xff5a3c, transparent: true, opacity: 0.45, side: THREE.DoubleSide, depthWrite: false }), 0, 0.12, 0); this.tel.visible = false; this.game.group.add(this.tel);

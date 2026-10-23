@@ -36,6 +36,7 @@ const App = window.SD = {
       App.session = App.make(id, opts);
       hud.bind(App.session.game);
       hud.setMode(App.session.spec.kind);
+      hud.setLevel(App.session.spec.name);
       document.getElementById('hud').style.display = '';
       Snd.music(App.session.def.music || 'meadow');
       App.paused = false;
@@ -229,7 +230,7 @@ function boot() {
     const used = Save.slots().findIndex((x) => x);
     Save.start(used >= 0 ? used : 0);
     App.session = App.make(dev);
-    hud.bind(App.session.game); hud.setMode(App.session.spec.kind);
+    hud.bind(App.session.game); hud.setMode(App.session.spec.kind); hud.setLevel(App.session.spec.name);
     hud.banner(App.session.spec.name, App.worldName(App.session.spec));
     Snd.music(App.session.def.music || 'meadow');
   } else {

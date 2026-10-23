@@ -2,6 +2,7 @@
 // Each phase lists attacks and how many to chain before the boss gets dizzy. Shield nodes (flame them) can gate the dizzy window.
 import * as THREE from 'three';
 import * as Props from './art/props.js';
+import { buildSmith, buildRoc, buildGlowmaw, buildQueen, buildGloam } from './art/bosses.js';
 
 const TAU = Math.PI * 2;
 const M = (c, o = {}) => new THREE.MeshLambertMaterial(Object.assign({ color: c, flatShading: true }, o));
@@ -12,112 +13,6 @@ const rnd = (a, b) => a + Math.random() * (b - a);
 const cone = (r, h, s = 6) => new THREE.ConeGeometry(r, h, s);
 const box = (w, h, d) => new THREE.BoxGeometry(w, h, d);
 const cyl = (a, b, h, s = 8) => new THREE.CylinderGeometry(a, b, h, s);
-
-// ---------------------------------------------------------------- bodies
-function buildSmith() {
-  const root = new THREE.Group(), body = new THREE.Group(); root.add(body);
-  const iron = M(0x4a4e5e), iron2 = M(0x363a48), glow = B(0xff8a2a);
-  const torso = mesh(ico(2.2, 1), iron, 0, 2.7, 0); torso.scale.set(1.2, 1.05, 1); body.add(torso);
-  const fur = mesh(ico(0.95, 1), glow, 0, 2.7, 1.8); body.add(fur);
-  const halo = mesh(ico(1.35, 1), new THREE.MeshBasicMaterial({ color: 0xff8a2a, transparent: true, opacity: 0.25, depthWrite: false }), 0, 2.7, 1.8); body.add(halo);
-  const head = mesh(ico(1.0, 1), iron2, 0, 5.0, 0.4); body.add(head);
-  head.add(mesh(box(1.2, 0.22, 0.3), B(0xffc24a), 0, 0.1, 0.88));
-  head.add(mesh(cone(0.25, 0.9, 5), M(0xc0c4d4), 0.7, 0.9, -0.1), mesh(cone(0.25, 0.9, 5), M(0xc0c4d4), -0.7, 0.9, -0.1));
-  body.add(mesh(cyl(0.35, 0.5, 2.2, 8), iron2, -1.1, 5.3, -1.0));
-  const flame = mesh(cone(0.4, 1.0, 6), B(0xffa23a), -1.1, 6.8, -1.0); body.add(flame);
-  const arms = [];
-  for (const s of [-1, 1]) {
-    const sh = new THREE.Group(); sh.position.set(2.6 * s, 3.8, 0); body.add(sh);
-    sh.add(mesh(ico(0.95, 1), iron, 0, 0, 0), mesh(cyl(0.45, 0.5, 2.6, 7), iron2, 0.2 * s, -1.4, 0.4));
-    if (s > 0) { // hammer
-      const h = new THREE.Group(); h.position.set(0.3, -2.7, 0.7); sh.add(h);
-      h.add(mesh(cyl(0.18, 0.18, 4.2, 6), M(0x6a4a2a), 0, 1.6, 0), mesh(box(2.4, 1.4, 1.4), iron, 0, 3.6, 0), mesh(box(2.5, 0.25, 1.5), glow, 0, 3.0, 0));
-    } else sh.add(mesh(ico(0.8, 1), iron, 0.2, -2.9, 0.7));
-    arms.push(sh);
-  }
-  root.add(mesh(ico(1.1, 1), iron2, -1.3, 0.7, 0), mesh(ico(1.1, 1), iron2, 1.3, 0.7, 0));
-  const core = fur;
-  return { root, body, head, arms, core, halo, extra: { flame }, animate(b, dt, k, st) { flame.scale.y = 1 + Math.sin(b.t_ * 14) * 0.25; if (st === 'atk') arms[1].rotation.x = -2.5 * k; else if (st !== 'dizzy') arms[1].rotation.x *= 0.9; } };
-}
-
-function buildRoc() {
-  const root = new THREE.Group(), body = new THREE.Group(); root.add(body);
-  const white = M(0xe8f0ff), blue = M(0x5a86e8), beakM = M(0xffa23a);
-  const torso = mesh(ico(1.9, 1), white, 0, 2.2, 0); torso.scale.set(1, 0.9, 1.55); body.add(torso);
-  body.add(mesh(ico(1.1, 1), blue, 0, 2.0, -0.6));
-  const head = mesh(ico(0.95, 1), white, 0, 3.6, 2.2); body.add(head);
-  head.add(mesh(cone(0.38, 1.5, 5), beakM, 0, -0.15, 1.1).rotateX(Math.PI / 2));
-  head.add(mesh(ico(0.2, 0), B(0x111122), 0.5, 0.2, 0.6), mesh(ico(0.2, 0), B(0x111122), -0.5, 0.2, 0.6));
-  for (let i = 0; i < 3; i++) head.add(mesh(cone(0.18, 0.9, 4), blue, (i - 1) * 0.3, 1.0, -0.2));
-  const wings = [];
-  for (const s of [-1, 1]) {
-    const w = new THREE.Group(); w.position.set(1.4 * s, 2.7, 0); body.add(w);
-    for (let i = 0; i < 4; i++) { const f = mesh(box(1.1, 0.12, 4.2 - i * 0.5), i % 2 ? white : blue, 1.1 * s * (i + 0.5) * 1.2, 0, -0.5 - i * 0.2); f.rotation.y = s * i * 0.1; w.add(f); }
-    wings.push(w);
-  }
-  for (let i = 0; i < 5; i++) body.add(mesh(box(0.35, 0.12, 2.6), i % 2 ? white : blue, (i - 2) * 0.5, 2.0, -3.4));
-  const core = mesh(ico(0.6, 1), B(0xffe27a), 0, 2.4, 1.9); body.add(core);
-  const halo = mesh(ico(0.95, 1), new THREE.MeshBasicMaterial({ color: 0xffe27a, transparent: true, opacity: 0.25, depthWrite: false }), 0, 2.4, 1.9); body.add(halo);
-  return { root, body, head, arms: wings, core, halo, animate(b, dt, k, st) { const f = st === 'dizzy' ? 0.2 : Math.sin(b.t_ * 7) * 0.6 + (st === 'atk' ? 0.4 : 0); wings.forEach((w, i) => { w.rotation.z = (i ? -1 : 1) * f; }); } };
-}
-
-function buildGlowmaw() {
-  const root = new THREE.Group(), body = new THREE.Group(); root.add(body);
-  const teal = M(0x2a6a8a), dark = M(0x1a3a5a), tooth = M(0xf4f4ff), glow = B(0x7ff0ff);
-  const torso = mesh(ico(2.7, 1), teal, 0, 2.8, -0.4); torso.scale.set(1.2, 1, 1.4); body.add(torso);
-  const jaw = new THREE.Group(); jaw.position.set(0, 1.5, 2.3); body.add(jaw);
-  jaw.add(mesh(box(3.6, 0.8, 2.4), dark, 0, -0.3, 0.6));
-  for (let i = 0; i < 7; i++) jaw.add(mesh(cone(0.2, 0.9, 4), tooth, (i - 3) * 0.5, 0.35, 1.7));
-  const upper = new THREE.Group(); upper.position.set(0, 2.9, 2.3); body.add(upper);
-  upper.add(mesh(box(3.6, 0.8, 2.4), dark, 0, 0.3, 0.4));
-  for (let i = 0; i < 7; i++) { const t = mesh(cone(0.2, 0.9, 4), tooth, (i - 3) * 0.5, -0.4, 1.5); t.rotation.x = Math.PI; upper.add(t); }
-  for (const s of [-1, 1]) { body.add(mesh(ico(0.6, 1), B(0xffe27a), 1.4 * s, 4.2, 1.7), mesh(ico(0.28, 0), B(0x111122), 1.5 * s, 4.2, 2.2)); }
-  body.add(mesh(cyl(0.12, 0.2, 3.2, 5), dark, 0, 5.6, 0.9).rotateX(0.7));
-  const core = mesh(ico(0.75, 1), glow, 0, 7.0, 2.1); body.add(core);
-  const halo = mesh(ico(1.2, 1), new THREE.MeshBasicMaterial({ color: 0x7ff0ff, transparent: true, opacity: 0.25, depthWrite: false }), 0, 7.0, 2.1); body.add(halo);
-  for (const s of [-1, 1]) { const fin = mesh(cone(0.9, 3.4, 4), teal, 3.2 * s, 2.6, -0.4); fin.rotation.z = -s * 1.2; body.add(fin); }
-  body.add(mesh(cone(1.2, 3.4, 5), teal, 0, 3.2, -4.4).rotateX(-Math.PI / 2));
-  return { root, body, head: upper, arms: [jaw], core, halo, animate(b, dt, k, st) { jaw.rotation.x = st === 'dizzy' ? 0.6 : st === 'atk' ? 0.4 * k : 0.05 + Math.sin(b.t_ * 2) * 0.05; core.scale.setScalar(st === 'dizzy' ? 0.4 : 1 + Math.sin(b.t_ * 6) * 0.1); } };
-}
-
-function buildQueen() {
-  const root = new THREE.Group(), body = new THREE.Group(); root.add(body);
-  const robe = M(0x6a3aa8), robe2 = M(0x8a5ac8), gold = M(0xffd36a), pale = M(0xf0e0ff);
-  body.add(mesh(cone(1.8, 4.6, 9), robe, 0, 2.3, 0));
-  body.add(mesh(cyl(1.0, 1.4, 1.2, 9), robe2, 0, 4.7, 0), mesh(ico(0.8, 1), pale, 0, 5.8, 0.1));
-  const head = body.children[body.children.length - 1];
-  head.add(mesh(ico(0.12, 0), B(0x221133), 0.28, 0.1, 0.7), mesh(ico(0.12, 0), B(0x221133), -0.28, 0.1, 0.7));
-  const crown = new THREE.Group(); crown.position.set(0, 6.5, 0); body.add(crown);
-  for (let i = 0; i < 6; i++) { const a = (i / 6) * TAU; crown.add(mesh(cyl(0.05, 0.05, 0.7, 4), gold, Math.cos(a) * 0.8, 0, Math.sin(a) * 0.8), mesh(ico(0.26, 1), B(0xffd36a), Math.cos(a) * 0.8, 0.55, Math.sin(a) * 0.8)); }
-  const arms = [];
-  for (const s of [-1, 1]) { const a = new THREE.Group(); a.position.set(1.5 * s, 4.7, 0.2); body.add(a); a.add(mesh(cone(0.55, 2.4, 6), robe2, 0.4 * s, -0.9, 0.5).rotateX(Math.PI)); a.add(mesh(ico(0.35, 0), pale, 0.7 * s, -2.1, 1.0)); arms.push(a); }
-  const core = mesh(ico(0.55, 1), B(0xff7af0), 0, 4.2, 1.5); body.add(core);
-  const halo = mesh(ico(0.9, 1), new THREE.MeshBasicMaterial({ color: 0xff7af0, transparent: true, opacity: 0.25, depthWrite: false }), 0, 4.2, 1.5); body.add(halo);
-  return { root, body, head, arms, core, halo, extra: { crown }, animate(b, dt, k, st) { crown.rotation.y += dt * 1.5; arms.forEach((a, i) => { a.rotation.x = st === 'atk' ? -1.8 * k : Math.sin(b.t_ * 3 + i) * 0.1; }); } };
-}
-
-function buildGloam() {
-  const root = new THREE.Group(), body = new THREE.Group(); root.add(body);
-  const black = M(0x2a2232), steel = M(0x4a4458), red = B(0xff3a4a);
-  const torso = mesh(ico(2.3, 1), black, 0, 3.0, 0); torso.scale.set(1.15, 1.2, 0.95); body.add(torso);
-  const chest = mesh(ico(1.3, 1), steel, 0, 3.4, 1.2); chest.scale.set(1.1, 0.9, 0.5); body.add(chest);
-  const head = mesh(ico(1.1, 1), steel, 0, 5.8, 0.4); body.add(head);
-  head.add(mesh(box(1.3, 0.2, 0.3), red, 0, 0.15, 0.95));
-  head.add(mesh(cone(0.3, 1.9, 5), M(0xc4c0d4), 0.9, 0.9, 0).rotateZ(-0.6), mesh(cone(0.3, 1.9, 5), M(0xc4c0d4), -0.9, 0.9, 0).rotateZ(0.6));
-  const core = mesh(ico(0.7, 1), red, 0, 3.4, 1.7); body.add(core);
-  const halo = mesh(ico(1.1, 1), new THREE.MeshBasicMaterial({ color: 0xff3a4a, transparent: true, opacity: 0.25, depthWrite: false }), 0, 3.4, 1.7); body.add(halo);
-  const cape = mesh(new THREE.PlaneGeometry(4.4, 6.0), M(0x5a1a3a, { side: THREE.DoubleSide }), 0, 3.0, -1.5); cape.rotation.x = 0.12; body.add(cape);
-  const arms = [];
-  for (const s of [-1, 1]) {
-    const sh = new THREE.Group(); sh.position.set(2.9 * s, 4.2, 0); body.add(sh);
-    sh.add(mesh(ico(1.1, 1), steel, 0, 0, 0), mesh(cone(0.4, 1.4, 5), steel, 0.2 * s, 0.9, 0), mesh(cyl(0.5, 0.55, 2.8, 7), black, 0.2 * s, -1.6, 0.4));
-    if (s > 0) { const sw = new THREE.Group(); sw.position.set(0.3, -3.0, 0.9); sh.add(sw); sw.add(mesh(box(0.5, 8, 0.2), M(0xc4c8e0), 0, 3.8, 0), mesh(box(1.6, 0.3, 0.4), M(0x8a5a2a), 0, -0.2, 0), mesh(box(0.14, 7.4, 0.3), red, 0, 3.8, 0)); }
-    arms.push(sh);
-  }
-  root.add(mesh(ico(1.2, 1), black, -1.4, 0.8, 0), mesh(ico(1.2, 1), black, 1.4, 0.8, 0));
-  root.scale.setScalar(1.05);
-  return { root, body, head, arms, core, halo, animate(b, dt, k, st) { cape.rotation.x = 0.12 + Math.sin(b.t_ * 3) * 0.06; if (st === 'atk') arms[1].rotation.x = -2.3 * k; else if (st !== 'dizzy') arms[1].rotation.x *= 0.9; } };
-}
 
 // ---------------------------------------------------------------- configs
 export const BOSSES = {

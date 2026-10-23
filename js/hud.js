@@ -13,6 +13,7 @@ export class Hud {
       <div class="pill lives"><span class="ico heart"></span><b id="h-lives">∞</b></div>
       <div class="pill suns" id="h-suns"><span class="ico sunico"></span><b id="h-sun">0</b><small id="h-suntot"></small></div>
       <div class="pill elders"><span class="ico eld"></span><b id="h-eld">0</b><small id="h-eldtot"></small></div>
+      <div id="levelname"></div>
       <div id="bossbar"><div class="nm"></div><div class="bar"><i></i></div></div><div id="banner"></div><div id="toast"></div><div id="fade"></div><div id="prompt"></div>`;
     document.body.appendChild(root);
     this.$ = (id) => document.getElementById(id);
@@ -31,6 +32,9 @@ export class Hud {
     f.style.display = 'flex';
     this.set('f-ring', st.rings); this.set('f-ringt', '/' + st.ringsTotal); this.set('f-tar', st.targets); this.set('f-tart', '/' + st.targetsTotal);
   }
+
+  // Quiet level label in the top-right corner, under the Wick pips.
+  setLevel(name) { const el = this.$('levelname'); if (el) el.textContent = name || ''; }
 
   bind(game) { this.game = game; this.last = {}; }
 
