@@ -7,17 +7,17 @@ const CX = 100, CZ = 100, PR = 56;
 
 // Landmark: a decor mesh (see art/landmarks.js) plus simple hidden collision boxes. Offsets are relative to the hill centre.
 const LANDMARKS = {
-  anvil: { k: 'anvil', s: 1, boxes: [[-4.6, -3.3, 4.6, 3.3, 6], [-7.4, -2.9, -5.0, -0.7, 12]] },
-  wind: { k: 'windtower', s: 1, boxes: [[-2.8, -2.8, 2.8, 2.8, 11]] },
-  obelisk: { k: 'obeliskhub', s: 1, boxes: [[-2.3, -2.3, 2.3, 2.3, 12]] },
-  clock: { k: 'clocktower', s: 1, boxes: [[-3.7, -3.7, 3.7, 3.7, 17]] },
+  anvil: { k: 'anvil', anim: 'anvil_anim', s: 1, boxes: [[-4.6, -3.3, 4.6, 3.3, 6], [-7.4, -2.9, -5.0, -0.7, 12]] },
+  wind: { k: 'windtower', anim: 'windtower_anim', s: 1, boxes: [[-2.8, -2.8, 2.8, 2.8, 11]] },
+  obelisk: { k: 'obeliskhub', anim: 'obeliskhub_anim', s: 1, boxes: [[-2.3, -2.3, 2.3, 2.3, 12]] },
+  clock: { k: 'clocktower', anim: 'clocktower_anim', s: 1, boxes: [[-3.7, -3.7, 3.7, 3.7, 17]] },
   gate: { k: 'archgate', s: 1.6, boxes: [[-8.5, -1.6, -5.9, 1.6, 12], [5.9, -1.6, 8.5, 1.6, 12]] },
 };
 function landmark(kind, n) {
   const L = LANDMARKS[kind];
   return {
     boxes: L.boxes.map(([x0, z0, x1, z1, h]) => ({ min: [n.x + x0, n.h - 0.5, n.z + z0], max: [n.x + x1, n.h + h, n.z + z1], hidden: true })),
-    decor: [{ k: L.k, x: n.x, y: n.h, z: n.z, s: L.s, ry: 0, v: 0.5 }],
+    decor: [{ k: L.k, x: n.x, y: n.h, z: n.z, s: L.s, ry: 0, v: 0.5 }, ...(L.anim ? [{ k: L.anim, x: n.x, y: n.h, z: n.z, s: L.s, ry: 0, v: 0.5 }] : [])],
   };
 }
 

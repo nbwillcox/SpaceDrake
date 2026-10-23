@@ -51,7 +51,7 @@ export default {
     { t: 'spikes', x: 100, z: 100, w: 4, d: 3 }, { t: 'spikes', x: 138, z: 90, w: 3, d: 3 },
     { t: 'exit', x: c.at('crown', 270, 5)[0], z: c.at('crown', 270, 5)[1] },
   ],
-  decor: () => [{ k: 'mineentrance', x: 66, y: 0.5, z: 141, s: 1, ry: 0, v: 0.5 }],
+  decor: () => [{ k: 'mineentrance', x: 66, y: 0.5, z: 141, s: 1, ry: 0, v: 0.5 }, { k: 'mineentrance_anim', x: 66, y: 0.5, z: 141, s: 1, ry: 0, v: 0.5 }],
   boxes: () => [
     { min: [62.5, -1, 140.6], max: [63.5, 5.8, 141.4], hidden: true }, { min: [68.5, -1, 140.6], max: [69.5, 5.8, 141.4], hidden: true },
     { min: [58.5, -1, 140], max: [61.5, 6, 143], hidden: true }, { min: [70.5, -1, 140], max: [73.5, 6, 143], hidden: true },

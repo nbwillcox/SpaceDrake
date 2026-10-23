@@ -61,7 +61,7 @@ export default {
     { t: 'spikes', x: 150, z: 80, w: 3, d: 3 }, { t: 'spikes', x: 144, z: 70, w: 3, d: 3 },
     { t: 'exit', x: c.at('exitPad')[0], z: c.at('exitPad')[1] },
   ],
-  decor: () => [{ k: 'millhouse', x: 179, y: 0.5, z: 112, s: 1, ry: 0, v: 0.5 }],
+  decor: () => [{ k: 'millhouse', x: 179, y: 0.5, z: 112, s: 1, ry: 0, v: 0.5 }, { k: 'millhouse_anim', x: 179, y: 0.5, z: 112, s: 1, ry: 0, v: 0.5 }],
   boxes: () => [{ min: [172, -1, 108], max: [186, 5.5, 116], hidden: true }],
   fill: [
     { t: 'pile', n: 22, v: 1, where: 'low', count: 6 }, { t: 'pile', n: 7, v: 2, where: 'low', count: 5 }, { t: 'ring', n: 5, v: 1, count: 10, r: 2.4 },

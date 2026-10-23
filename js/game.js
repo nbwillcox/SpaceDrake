@@ -347,7 +347,15 @@ export class Game {
     this.events.push({ type: 'gem', v: g.v, x: g.x, y: g.y, z: g.z });
   }
 
+  // is this portal still locked (not enough Elders / gems, or the guardian is alive)?
+  _portalLocked(th) {
+    const need = th.need || {}, T = this.totals;
+    const needE = need.elders ? Math.ceil(need.elders * (this.settings.cozy ? 0.75 : 1)) : 0;
+    return needE > T.elders || (need.gems || 0) > T.gems || !!(need.done && !(T.done || []).includes(need.done));
+  }
+
   _updatePortal(th, dt, player, dist, dy, alive) {
+    if (th.need && th.mesh.userData.setLocked) { const lk = this._portalLocked(th); if (lk !== th.locked) { th.locked = lk; th.mesh.userData.setLocked(lk); } }
     th.mesh.userData.spin(this.time);
     th.cool = Math.max(0, th.cool - dt);
     if (!alive || dist > th.r || Math.abs(dy) > 2.5 || th.cool > 0) return;

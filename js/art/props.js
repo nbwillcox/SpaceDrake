@@ -70,19 +70,32 @@ export function makeGemInstances(count) {
   return im;
 }
 
+// Supply crates in three finishes (raw timber, red-painted, teal-painted) with iron corner brackets, a rope band,
+// a lid with cross-planks and a gold gem stencil so they read as "loot inside".
+const CRATE_STYLES = [{ plank: 0xc98a4b, plank2: 0xb67a40, trim: 0x6b3f1a }, { plank: 0xc4503e, plank2: 0xad4434, trim: 0xf4e8d0 }, { plank: 0x3fae96, plank2: 0x35998a, trim: 0xf4e8d0 }];
 export function makeCrate() {
   const g = new THREE.Group();
-  const plank = M(0xc98a4b), plank2 = M(0xb67a40), dark = M(0x6b3f1a), iron = M(0x3d3a4a);
-  g.add(mesh(new THREE.BoxGeometry(0.88, 0.88, 0.88), plank2, 0, 0.45, 0));
-  // slatted faces: raised planks on every side
-  for (const [rx, rz, ry] of [[0, 0.45, 0], [0, -0.45, 0], [0.45, 0, Math.PI / 2], [-0.45, 0, Math.PI / 2]]) {
-    for (let i = 0; i < 3; i++) { const p = mesh(new THREE.BoxGeometry(0.88, 0.26, 0.05), i % 2 ? plank : plank2, 0, 0.18 + i * 0.28, 0); const holder = new THREE.Group(); holder.position.set(rx, 0, rz); holder.rotation.y = ry; holder.add(p); g.add(holder); }
+  const st = CRATE_STYLES[Math.floor(Math.random() * CRATE_STYLES.length)];
+  const plank = M(st.plank), plank2 = M(st.plank2), trim = M(st.trim), iron = M(0x3d3a4a), gold = M(0xffd23e), rope = M(0xd8c7a0);
+  g.add(mesh(new THREE.BoxGeometry(0.86, 0.86, 0.86), plank2, 0, 0.45, 0));
+  for (const [rx, rz, ry] of [[0, 0.44, 0], [0, -0.44, 0], [0.44, 0, Math.PI / 2], [-0.44, 0, Math.PI / 2]]) {
+    const holder = new THREE.Group(); holder.position.set(rx, 0, rz); holder.rotation.y = ry; g.add(holder);
+    for (let i = 0; i < 4; i++) holder.add(mesh(new THREE.BoxGeometry(0.84, 0.2, 0.05), i % 2 ? plank : plank2, 0, 0.13 + i * 0.21, 0));
   }
-  // corner posts, iron straps and an X brace on the front
-  for (const sx of [-1, 1]) for (const sz of [-1, 1]) g.add(mesh(new THREE.BoxGeometry(0.1, 0.92, 0.1), dark, 0.44 * sx, 0.46, 0.44 * sz));
-  for (const y of [0.1, 0.8]) g.add(mesh(new THREE.BoxGeometry(0.94, 0.06, 0.94), iron, 0, y, 0));
-  for (const s of [-1, 1]) { const b = mesh(new THREE.BoxGeometry(0.06, 1.0, 0.04), dark, 0, 0.45, 0.47); b.rotation.z = s * 0.62; g.add(b); }
-  g.add(mesh(new THREE.BoxGeometry(0.98, 0.1, 0.98), dark, 0, 0.9, 0));
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
+    g.add(mesh(new THREE.BoxGeometry(0.1, 0.9, 0.1), trim, 0.43 * sx, 0.45, 0.43 * sz));
+    for (const y of [0.06, 0.84]) { g.add(mesh(new THREE.BoxGeometry(0.2, 0.06, 0.2), iron, 0.4 * sx, y, 0.4 * sz)); g.add(mesh(ico(0.035, 0), gold, 0.5 * sx, y, 0.4 * sz), mesh(ico(0.035, 0), gold, 0.4 * sx, y, 0.5 * sz)); }
+  }
+  // rope band with a knot
+  for (const [w, d, x, z] of [[0.96, 0.05, 0, 0.47], [0.96, 0.05, 0, -0.47], [0.05, 0.96, 0.47, 0], [0.05, 0.96, -0.47, 0]]) g.add(mesh(new THREE.BoxGeometry(w, 0.07, d), rope, x, 0.5, z));
+  g.add(mesh(ico(0.07, 0), rope, 0.2, 0.52, 0.5), mesh(ico(0.05, 0), rope, 0.28, 0.45, 0.5));
+  // gem stencil on the front
+  const d = mesh(new THREE.OctahedronGeometry(0.17, 0), gold, 0, 0.3, 0.485); d.scale.set(1, 1.3, 0.25); g.add(d);
+  g.add(mesh(new THREE.BoxGeometry(0.46, 0.46, 0.02), M(0x3a2a18), 0, 0.3, 0.472));
+  // lid
+  g.add(mesh(new THREE.BoxGeometry(0.98, 0.1, 0.98), trim, 0, 0.9, 0));
+  for (const s of [-1, 1]) { const b = mesh(new THREE.BoxGeometry(0.08, 0.05, 1.04), plank, 0, 0.96, 0); b.rotation.y = s * Math.PI / 4; b.scale.x = 1; g.add(b); }
+  g.rotation.y = (Math.random() - 0.5) * 0.4;
   return g;
 }
 
@@ -291,37 +304,89 @@ export function makeWick() {
   return g;
 }
 
+// A stone portal gateway: carved pillars with pennants, a gold ring, a swirling disc, a rotating glyph ring on the dais,
+// a floating keystone and a light beam so it can be spotted from far away. Locked portals go dark and wear chains and a padlock.
+function spiralTex() {
+  const c = document.createElement('canvas'); c.width = c.height = 256; const x = c.getContext('2d');
+  x.translate(128, 128); x.lineCap = 'round';
+  for (let arm = 0; arm < 4; arm++) {
+    for (let r = 6; r < 124; r += 2) {
+      const a = r * 0.052 + arm * Math.PI / 2, f = r / 124;
+      x.strokeStyle = `rgba(255,255,255,${0.55 * (1 - f * 0.55) * Math.min(1, r / 24)})`; x.lineWidth = 3 + f * 9;
+      x.beginPath(); x.moveTo(Math.cos(a) * r, Math.sin(a) * r); x.lineTo(Math.cos(a + 0.05) * (r + 2), Math.sin(a + 0.05) * (r + 2)); x.stroke();
+    }
+  }
+  const gr = x.createRadialGradient(0, 0, 0, 0, 0, 40); gr.addColorStop(0, 'rgba(255,255,255,0.9)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = gr; x.fillRect(-128, -128, 256, 256);
+  return new THREE.CanvasTexture(c);
+}
+function glyphTex() {
+  const c = document.createElement('canvas'); c.width = c.height = 512; const x = c.getContext('2d');
+  x.translate(256, 256); x.strokeStyle = '#fff'; x.lineWidth = 7; x.lineCap = 'round';
+  for (let i = 0; i < 16; i++) {
+    x.save(); x.rotate((i / 16) * Math.PI * 2); x.translate(0, -214);
+    const s = (n) => Math.sin(i * 12.9 + n) * 0.5 + 0.5;
+    x.beginPath(); x.moveTo(-10, -20 + s(1) * 8); x.lineTo(10 * (s(2) - 0.5) * 2, 0); x.lineTo(-8, 20 - s(3) * 8); x.moveTo(0, -22); x.lineTo(0, 22); if (s(4) > 0.5) { x.moveTo(-12, 4); x.lineTo(12, -6); } x.stroke();
+    x.restore();
+  }
+  x.lineWidth = 6; x.beginPath(); x.arc(0, 0, 250, 0, 7); x.stroke(); x.beginPath(); x.arc(0, 0, 176, 0, 7); x.stroke();
+  return new THREE.CanvasTexture(c);
+}
+let _spiral = null, _glyph = null;
 export function makePortal(color, label, sub = '') {
   const g = new THREE.Group();
-  const stone = M(0x6c6480), stone2 = M(0x8a82a2), dark = M(0x4a4262), gold = M(0xffd36a);
+  _spiral = _spiral || spiralTex(); _glyph = _glyph || glyphTex();
+  const stone = M(0x6c6480), stone2 = M(0x8a82a2), dark = M(0x4a4262), gold = M(0xffd36a), iron = M(0x2e2a3c);
   g.add(mesh(new THREE.CylinderGeometry(3.0, 3.3, 0.34, 10), dark, 0, 0.17, 0), mesh(new THREE.CylinderGeometry(2.5, 2.8, 0.26, 10), stone, 0, 0.47, 0));
-  const runes = mesh(new THREE.TorusGeometry(2.15, 0.07, 5, 24).rotateX(Math.PI / 2), B(color), 0, 0.62, 0); g.add(runes);
-  for (let i = 0; i < 8; i++) { const a = (i / 8) * Math.PI * 2; const m = mesh(new THREE.BoxGeometry(0.26, 0.05, 0.1), B(color), Math.cos(a) * 2.45, 0.61, Math.sin(a) * 2.45); m.rotation.y = -a; g.add(m); }
-  const R = 2.0, cy = 2.9;
+  const glyphMat = new THREE.MeshBasicMaterial({ map: _glyph, color, transparent: true, opacity: 0.9, depthWrite: false, blending: THREE.AdditiveBlending });
+  const glyphs = mesh(new THREE.RingGeometry(1.1, 2.55, 48).rotateX(-Math.PI / 2), glyphMat, 0, 0.62, 0);
+  // RingGeometry UVs are planar so the texture maps across the full square: scale it to the ring
+  const uv = glyphs.geometry.attributes.uv; for (let i = 0; i < uv.count; i++) { const x = glyphs.geometry.attributes.position.getX(i), z = glyphs.geometry.attributes.position.getZ(i); uv.setXY(i, 0.5 + x / 5.1, 0.5 + z / 5.1); }
+  g.add(glyphs);
+  const R = 2.0, cy = 2.9, px = R + 0.35;
+  const pennants = [];
   for (const s of [-1, 1]) {
-    g.add(mesh(new THREE.BoxGeometry(1.3, 0.55, 1.3), dark, s * (R + 0.35), 0.8, 0));
-    g.add(mesh(new THREE.CylinderGeometry(0.42, 0.55, 4.0, 8), stone2, s * (R + 0.35), 2.8, 0));
-    g.add(mesh(new THREE.CylinderGeometry(0.6, 0.45, 0.32, 8), stone, s * (R + 0.35), 4.9, 0), mesh(new THREE.BoxGeometry(1.2, 0.22, 1.2), stone, s * (R + 0.35), 5.15, 0));
-    g.add(mesh(new THREE.ConeGeometry(0.3, 0.8, 5), B(color), s * (R + 0.35), 5.7, 0));
-    g.add(mesh(new THREE.TorusGeometry(0.46, 0.05, 5, 10).rotateX(Math.PI / 2), gold, s * (R + 0.35), 2.2, 0));
+    g.add(mesh(new THREE.BoxGeometry(1.3, 0.55, 1.3), dark, s * px, 0.8, 0), mesh(new THREE.CylinderGeometry(0.42, 0.55, 4.0, 8), stone2, s * px, 2.8, 0));
+    g.add(mesh(new THREE.CylinderGeometry(0.6, 0.45, 0.32, 8), stone, s * px, 4.9, 0), mesh(new THREE.BoxGeometry(1.2, 0.22, 1.2), stone, s * px, 5.15, 0));
+    g.add(mesh(new THREE.ConeGeometry(0.3, 0.8, 5), new THREE.MeshBasicMaterial({ color }), s * px, 5.7, 0), mesh(new THREE.TorusGeometry(0.46, 0.05, 5, 10).rotateX(Math.PI / 2), gold, s * px, 2.2, 0));
+    for (const y of [1.4, 3.4]) g.add(mesh(new THREE.BoxGeometry(0.14, 0.5, 0.06), new THREE.MeshBasicMaterial({ color }), s * px, y, 0.5));
+    const pen = mesh(new THREE.PlaneGeometry(0.7, 1.6, 1, 4), new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide }), s * px + s * 0.55, 4.0, 0); g.add(pen); pennants.push({ m: pen, s });
+    g.add(mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.9, 4), iron, s * px + s * 0.3, 4.75, 0).rotateZ(Math.PI / 2 * 0));
   }
   const ring = mesh(new THREE.TorusGeometry(R, 0.2, 8, 36), gold, 0, cy, 0); g.add(ring);
-  const glowRing = mesh(new THREE.TorusGeometry(R - 0.2, 0.09, 6, 36), B(color), 0, cy, 0); g.add(glowRing);
-  const disc = mesh(new THREE.CircleGeometry(R - 0.25, 32), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.35, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending }), 0, cy, 0); g.add(disc);
-  const swirls = [];
-  for (let i = 0; i < 3; i++) { const sw = mesh(new THREE.TorusGeometry(0.5 + i * 0.45, 0.04, 4, 24, Math.PI * 1.4), B(i % 2 ? 0xffffff : color), 0, cy, 0.02); g.add(sw); swirls.push(sw); }
+  for (let i = 0; i < 12; i++) { const a = (i / 12) * Math.PI * 2; g.add(mesh(ico(0.07, 0), new THREE.MeshBasicMaterial({ color }), Math.cos(a) * R, cy + Math.sin(a) * R, 0.2)); }
+  const glowRing = mesh(new THREE.TorusGeometry(R - 0.2, 0.08, 6, 36), new THREE.MeshBasicMaterial({ color }), 0, cy, 0); g.add(glowRing);
+  const sp1 = mesh(new THREE.CircleGeometry(R - 0.2, 40), new THREE.MeshBasicMaterial({ map: _spiral, color, transparent: true, opacity: 0.85, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending }), 0, cy, 0); g.add(sp1);
+  const sp2 = mesh(new THREE.CircleGeometry(R - 0.5, 40), new THREE.MeshBasicMaterial({ map: _spiral, color: 0xffffff, transparent: true, opacity: 0.4, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending }), 0, cy, 0.03); g.add(sp2);
+  const disc = mesh(new THREE.CircleGeometry(R - 0.2, 32), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.25, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending }), 0, cy, -0.02); g.add(disc);
+  const key = mesh(new THREE.OctahedronGeometry(0.34, 0), new THREE.MeshBasicMaterial({ color }), 0, cy + R + 0.65, 0); key.scale.y = 1.5; g.add(key);
   const halo = glowSprite(color, 6.0, 0.45); halo.position.y = cy; g.add(halo);
+  const beam = mesh(new THREE.CylinderGeometry(0.5, 1.3, 16, 12, 1, true), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.1, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending }), 0, 8.4, 0); g.add(beam);
   const motes = [];
   for (let i = 0; i < 10; i++) { const m = glowSprite(color, 0.28, 0.9); g.add(m); motes.push({ m, a: Math.random() * 6.28, o: Math.random(), r: 0.6 + Math.random() * 1.2 }); }
+  // locked state: padlock and chains across the opening
+  const lock = new THREE.Group(); lock.visible = false; g.add(lock);
+  for (const s of [-1, 1]) { const ch = mesh(new THREE.TorusGeometry(R - 0.1, 0.07, 5, 24, Math.PI * 0.9), iron, 0, cy, 0.06); ch.rotation.z = s * 0.5 + (s > 0 ? 0 : Math.PI) - 0.2; lock.add(ch); }
+  for (let i = 0; i < 9; i++) { const l = mesh(new THREE.TorusGeometry(0.14, 0.04, 4, 8), iron, -1.6 + i * 0.4, cy + (i % 2 ? 0.1 : -0.1) + Math.sin(i * 0.7) * 0.15, 0.1); l.rotation.y = i % 2 ? 0 : Math.PI / 2; lock.add(l); }
+  lock.add(mesh(new THREE.BoxGeometry(0.7, 0.6, 0.3), gold, 0, cy - 0.15, 0.14), mesh(new THREE.TorusGeometry(0.24, 0.07, 5, 10, Math.PI), gold, 0, cy + 0.15, 0.14), mesh(ico(0.07, 0), iron, 0, cy - 0.15, 0.3));
   const c = document.createElement('canvas'); c.width = 512; c.height = 160;
   const x = c.getContext('2d'); x.textAlign = 'center'; x.fillStyle = '#fff'; x.shadowColor = '#000'; x.shadowBlur = 8;
   x.font = 'bold 54px system-ui, sans-serif'; x.fillText(label, 256, 70);
   if (sub) { x.font = '600 36px system-ui, sans-serif'; x.fillStyle = '#ffe27a'; x.fillText(sub, 256, 124); }
   const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false }));
   spr.scale.set(5.4, 1.7, 1); spr.position.y = 7.3; g.add(spr);
+  const tint = new THREE.Color(color), grey = new THREE.Color(0x5a5a70);
+  let locked = false;
+  g.userData.setLocked = (v) => {
+    if (v === locked) return; locked = v; lock.visible = v;
+    const c0 = v ? grey : tint;
+    for (const m of [glyphMat, sp1.material, disc.material, halo.material, beam.material, glowRing.material, key.material]) m.color.copy(c0);
+    beam.visible = !v; sp2.visible = !v; sp1.material.opacity = v ? 0.25 : 0.85; disc.material.opacity = v ? 0.08 : 0.25; spr.material.opacity = 1;
+  };
   g.userData.spin = (t) => {
-    swirls.forEach((s, i) => { s.rotation.z = t * (i % 2 ? -1.4 : 1.1) + i; }); disc.material.opacity = 0.3 + Math.sin(t * 3) * 0.08; halo.material.opacity = 0.4 + Math.sin(t * 2.2) * 0.1;
-    runes.material.color.setHex(color); motes.forEach((m) => { const f = ((t * 0.35 + m.o) % 1), a = m.a + t * 0.8; m.m.position.set(Math.cos(a) * m.r, cy - 1.4 + f * 3.0, Math.sin(a) * 0.3); m.m.material.opacity = 0.9 * Math.sin(f * Math.PI); });
+    sp1.rotation.z = locked ? t * 0.05 : t * 0.9; sp2.rotation.z = -t * 1.4; glyphs.rotation.y = locked ? 0 : t * 0.25; key.rotation.y = t * 1.2; key.position.y = cy + R + 0.65 + Math.sin(t * 2) * 0.1;
+    if (!locked) { disc.material.opacity = 0.22 + Math.sin(t * 3) * 0.06; halo.material.opacity = 0.4 + Math.sin(t * 2.2) * 0.1; beam.material.opacity = 0.09 + Math.sin(t * 1.6) * 0.03; }
+    pennants.forEach((p, i) => { const pos = p.m.geometry.attributes.position; for (let k = 0; k < pos.count; k++) { const y = pos.getY(k); pos.setZ(k, Math.sin(t * 4 + y * 3 + i) * 0.1 * (0.8 - y)); } pos.needsUpdate = true; });
+    motes.forEach((m) => { const f = ((t * 0.35 + m.o) % 1), a = m.a + t * 0.8; m.m.position.set(Math.cos(a) * m.r, cy - 1.4 + f * 3.0, Math.sin(a) * 0.3); m.m.material.opacity = (locked ? 0.2 : 0.9) * Math.sin(f * Math.PI); });
   };
   g.userData.label = spr;
   return g;

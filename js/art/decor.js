@@ -2,7 +2,7 @@
 // Shapes are hand-jittered (hash-based vertex noise) so nothing is a perfect cone or sphere, and every part
 // gets baked top-light / bottom-shadow shading so forms read even in flat light.
 import * as THREE from 'three';
-import { landmarkKinds } from './landmarks.js';
+import { landmarkKinds, landmarkAnim } from './landmarks.js';
 
 // deterministic noise on position -> identical vertices move together, so indexed meshes never crack
 const hash3 = (x, y, z) => { const h = Math.sin(x * 127.1 + y * 311.7 + z * 74.7) * 43758.5453; return h - Math.floor(h); };
@@ -32,7 +32,9 @@ function merge(parts) {
     const n = geo.attributes.position.count, nrm = geo.attributes.normal;
     pos.set(geo.attributes.position.array, o * 3); nor.set(nrm.array, o * 3);
     for (let i = 0; i < n; i++) {
-      const k = Math.max(0.55, 1 + sh * nrm.getY(i));
+      const px = geo.attributes.position.getX(i), py = geo.attributes.position.getY(i), pz = geo.attributes.position.getZ(i);
+      const grain = 1 + (hash3(Math.floor(px * 2.3), Math.floor(py * 2.3), Math.floor(pz * 2.3)) - 0.5) * 0.14; // mottling so big surfaces are not flat colour
+      const k = Math.max(0.55, 1 + sh * nrm.getY(i)) * grain;
       col[(o + i) * 3] = Math.min(1, c.r * k); col[(o + i) * 3 + 1] = Math.min(1, c.g * k); col[(o + i) * 3 + 2] = Math.min(1, c.b * k);
     }
     o += n;
@@ -181,7 +183,9 @@ const KINDS = {
   },
 };
 
-Object.assign(KINDS, landmarkKinds({ merge, J, T, S, RY, RZ, RX, mul, cone, cyl, ico, box, shade, THREE }));
+const HELP = { merge, J, T, S, RY, RZ, RX, mul, cone, cyl, ico, box, shade, THREE };
+Object.assign(KINDS, landmarkKinds(HELP));
+const ANIM = landmarkAnim(HELP);
 
 export function buildDecor(spec, theme) {
   const group = new THREE.Group();
@@ -190,7 +194,9 @@ export function buildDecor(spec, theme) {
   const mat = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
   const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), pos = new THREE.Vector3(), sc = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0);
   const tints = new THREE.Color();
+  const anims = [];
   for (const [k, list] of Object.entries(byKind)) {
+    if (ANIM[k]) { for (const d of list) { const a = ANIM[k](theme.palette || {}); const holder = new THREE.Group(); holder.position.set(d.x, d.y, d.z); holder.rotation.y = d.ry; holder.scale.setScalar(d.s); holder.add(a.obj); group.add(holder); anims.push(a); } continue; }
     if (!KINDS[k]) continue;
     const geo = KINDS[k](theme.palette || {});
     const im = new THREE.InstancedMesh(geo, mat, list.length);
@@ -202,5 +208,6 @@ export function buildDecor(spec, theme) {
     im.instanceMatrix.needsUpdate = true;
     group.add(im);
   }
+  group.userData.update = (t) => { for (const a of anims) a.update(t); };
   return group;
 }

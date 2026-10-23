@@ -50,7 +50,7 @@ export class Session {
 
     this.terrain = buildTerrainMesh(world, th); scene.add(this.terrain);
     this.boxGroup = new THREE.Group(); scene.add(this.boxGroup); buildBoxMeshes(world, this.boxGroup);
-    scene.add(buildDecor(spec, th));
+    this.decor = buildDecor(spec, th); scene.add(this.decor);
     scene.add(buildBridges(spec, spec.def.bridgeColor));
     if (spec.liquid) {
       const cloud = spec.liquid.kind === 'cloud';
@@ -199,6 +199,7 @@ export class Session {
     const inp = this.lastInp || Input.state;
     cam.update(dt, { x: rx, y: ry, z: rz, yaw: ryaw, vx: player.vx, vz: player.vz, onGround: player.onGround }, this.app.camLocked ? { ...inp, csx: 0, csy: 0, cdx: 0, cdy: 0, lookHeld: false } : inp, world);
     fx.update(dt);
+    if (this.decor.userData.update) this.decor.userData.update(this.time);
     game.render();
     const cam3 = this.app.camera;
     if (this.freeCam) { cam3.position.set(...this.freeCam.pos); cam3.lookAt(...this.freeCam.look); }
