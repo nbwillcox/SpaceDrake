@@ -182,10 +182,10 @@ export class Game {
 
   _kill(th, how) {
     th.alive = false; if (th.kind !== 'chest') th.mesh.visible = false;
-    this.events.push({ type: th.kind === 'enemy' ? 'kill' : 'break', x: th.x, y: th.y + 0.5, z: th.z, kind: th.kind === 'enemy' ? th.ekind : th.kind });
+    this.events.push({ type: th.kind === 'enemy' ? 'kill' : th.kind === 'chest' ? 'chest' : 'break', x: th.x, y: th.y + 0.5, z: th.z, kind: th.kind === 'enemy' ? th.ekind : th.kind });
     if (th.kind === 'enemy') this.state.kills++;
     if (th.sunId !== undefined) this._dropSunstone(th);
-    this._releaseDrops(th, 5);
+    this._releaseDrops(th, th.kind === 'chest' ? 8 : 5);
   }
 
   // ---- per-step update
@@ -269,15 +269,14 @@ export class Game {
           if (inCone || inCharge) this._kill(th, inCharge ? 'charge' : 'flame');
           break;
         case 'chest':
-          if (inCharge) { this._kill(th, 'charge'); }
-          else if (inCone) { th.flameId = player.flameId; this.events.push({ type: 'clink', x: th.x, y: th.y + 0.6, z: th.z }); }
-          if (!th.alive) break;
+          // opens when Cinder runs into it (or charges / flames it)
+          if (inCharge || inCone || (alive && dist < th.r + 0.5 && Math.abs(dy) < 1.4)) { th.openAt = this.time; this._kill(th, 'touch'); }
           break;
         case 'moth': this._updateMoth(th, dt, inCone, player); break;
         case 'lantern':
           if (alive && dist < th.r && Math.abs(dy) < 2 && !th.lit) this._light(th);
           if (inCone && !th.lit) this._light(th);
-          th.mesh.userData.lamp.material.color.setHex(th.lit ? (0xffd36a) : 0x6a6f8a);
+          th.mesh.userData.tick(this.time, th.lit, th.x);
           break;
         case 'elder': if (alive && dist < th.r && Math.abs(dy) < 2.2) this._rescue(th); break;
         case 'exit': th.mesh.userData.spin(this.time); if (alive && !this.finished && dist < th.r && Math.abs(dy) < 2.5) { this.finished = true; this.events.push({ type: 'exit' }); } break;
@@ -392,7 +391,7 @@ export class Game {
     } else this.toast(`${mates.filter((t) => t.lit).length} / ${mates.length} braziers lit`, 1.8);
   }
 
-  _light(th) { th.lit = true; this.checkpoint = { x: th.x + Math.sin(th.ry) * 1.5, y: th.y, z: th.z + Math.cos(th.ry) * 1.5, yaw: th.ry }; this.events.push({ type: 'checkpoint' }); this.toast('Checkpoint lit!', 1.8); }
+  _light(th) { th.lit = true; th.mesh.userData.setLit && th.mesh.userData.setLit(true); this.checkpoint = { x: th.x + Math.sin(th.ry) * 1.5, y: th.y, z: th.z + Math.cos(th.ry) * 1.5, yaw: th.ry }; this.events.push({ type: 'checkpoint' }); this.toast('Checkpoint lit!', 1.8); }
 
   _rescue(th) {
     th.alive = false; th.freed = true; th.t = 0;
@@ -538,6 +537,6 @@ export class Game {
     }
     gm.instanceMatrix.needsUpdate = true;
     // chest lids
-    for (const th of this.things) if (th.kind === 'chest') th.mesh.userData.lid.rotation.x = th.alive ? 0 : -1.2;
+    for (const th of this.things) if (th.kind === 'chest') { const k = th.alive ? 0 : Math.min(1, (this.time - (th.openAt || 0)) / 0.6); th.mesh.userData.setOpen(k, this.time); if (th.alive) th.mesh.userData.shimmer(this.time); }
   }
 }

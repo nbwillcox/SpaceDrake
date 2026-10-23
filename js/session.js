@@ -156,6 +156,7 @@ export class Session {
     switch (e.type) {
       case 'gem': fx.sparkle(e.x, e.y, e.z, 4, ...(e.v >= 10 ? [1, 0.8, 0.3] : e.v >= 5 ? [0.4, 0.7, 1] : e.v >= 2 ? [0.4, 1, 0.55] : [1, 0.4, 0.5])); Input.rumble(0.05, 0.12, 40); break;
       case 'break': fx.dust(e.x, e.y - 0.3, e.z, 10, 1.5); fx.sparkle(e.x, e.y, e.z, 6, 1, 0.7, 0.3); Input.rumble(0.3, 0.3, 70); break;
+      case 'chest': fx.sparkle(e.x, e.y + 0.4, e.z, 30, 1, 0.85, 0.3); fx.sparkle(e.x, e.y + 0.8, e.z, 14, 1, 1, 0.8); fx.dust(e.x, e.y - 0.3, e.z, 6, 1.2); Input.rumble(0.4, 0.6, 200); break;
       case 'kill': fx.sparkle(e.x, e.y, e.z, 14, 1, 0.55, 0.25); fx.dust(e.x, e.y - 0.4, e.z, 6, 1.2); Input.rumble(0.4, 0.5, 100); break;
       case 'hurt': fx.sparkle(player.x, player.y + 0.6, player.z, 10, 1, 0.3, 0.3); Input.rumble(0.9, 0.9, 220); break;
       case 'heal': fx.sparkle(player.x, player.y + 1.2, player.z, 12, 1, 0.9, 0.4); break;

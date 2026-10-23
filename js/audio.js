@@ -76,6 +76,7 @@ const SFX = {
   charge: (t) => { noise(t, 0.35, 0.25, { f: 500, to: 2400, q: 1.2 }); tone(120, t, 0.3, 'sawtooth', 0.12, { to: 340, lp: 900 }); },
   flame: (t) => { noise(t, 0.4, 0.28, { f: 1400, to: 500, q: 0.6 }); noise(t + 0.03, 0.34, 0.12, { f: 300, type: 'lowpass' }); },
   gem: (t, e) => { const v = (e && e.v) || 1, base = 880 * Math.pow(2, ({ 1: 0, 2: 2, 5: 4, 10: 7, 25: 12 }[v] || 0) / 12); tone(base, t, 0.09, 'triangle', 0.16); tone(base * 1.5, t + 0.06, 0.16, 'triangle', 0.14); },
+  chest: (t) => { tone(220, t, 0.25, 'square', 0.1, { to: 330 }); [523, 659, 784, 1046, 1318].forEach((f, i) => tone(f, t + 0.12 + i * 0.07, 0.4, 'triangle', 0.15)); },
   break: (t) => { noise(t, 0.2, 0.3, { f: 1800, to: 400 }); tone(180, t, 0.1, 'square', 0.1, { to: 60 }); },
   kill: (t) => { noise(t, 0.16, 0.25, { f: 2200, to: 500 }); tone(520, t, 0.14, 'square', 0.12, { to: 180 }); },
   hurt: (t) => { tone(300, t, 0.3, 'sawtooth', 0.22, { to: 90, lp: 1200 }); noise(t, 0.14, 0.2, { f: 700 }); },
@@ -180,7 +181,7 @@ export const Audio = {
   },
   // map gameplay event types to sounds
   event(type, e) {
-    const m = { jump: 'jump', land: 'land', charge: 'charge', flame: 'flame', glide: 'glide', gem: 'gem', break: 'break', kill: 'kill', hurt: 'hurt', heal: 'heal', moth: 'moth', rescue: 'rescue', sunstone: 'sunstone', checkpoint: 'checkpoint', clink: 'clink', spring: 'spring', gate: 'gate', locked: 'locked', zap: 'zap', spit: 'spit', splash: 'splash', fall: 'fall', ring: 'ring', portal: 'portal', exit: 'exit', hit: 'hit', bosshit: 'bosshit', roar: 'roar', slam: 'slam', bossdead: 'bossdead', bump: 'clink', respawn: null };
+    const m = { jump: 'jump', land: 'land', charge: 'charge', flame: 'flame', glide: 'glide', gem: 'gem', break: 'break', chest: 'chest', kill: 'kill', hurt: 'hurt', heal: 'heal', moth: 'moth', rescue: 'rescue', sunstone: 'sunstone', checkpoint: 'checkpoint', clink: 'clink', spring: 'spring', gate: 'gate', locked: 'locked', zap: 'zap', spit: 'spit', splash: 'splash', fall: 'fall', ring: 'ring', portal: 'portal', exit: 'exit', hit: 'hit', bosshit: 'bosshit', roar: 'roar', slam: 'slam', bossdead: 'bossdead', bump: 'clink', respawn: null };
     const n = m[type]; if (n) Audio.sfx(n, e);
   },
   music(name) {

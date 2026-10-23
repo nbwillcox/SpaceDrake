@@ -7,6 +7,22 @@ const B = (c, o = {}) => new THREE.MeshBasicMaterial(Object.assign({ color: c },
 const mesh = (g, m, x = 0, y = 0, z = 0) => { const o = new THREE.Mesh(g, m); o.position.set(x, y, z); return o; };
 const ico = (r, d = 0) => new THREE.IcosahedronGeometry(r, d);
 
+// ---- shared soft glow sprite texture
+let _glowTex = null;
+function glowTex() {
+  if (_glowTex) return _glowTex;
+  const c = document.createElement('canvas'); c.width = c.height = 64;
+  const x = c.getContext('2d'); const gr = x.createRadialGradient(32, 32, 0, 32, 32, 32);
+  gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.3, 'rgba(255,255,255,0.5)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+  x.fillStyle = gr; x.fillRect(0, 0, 64, 64);
+  _glowTex = new THREE.CanvasTexture(c); return _glowTex;
+}
+const glowSprite = (color, scale, opacity = 1) => {
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex(), color, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity }));
+  s.scale.setScalar(scale); return s;
+};
+
+
 export const GEM_COLORS = { 1: 0xff4d6a, 2: 0x3ee07f, 5: 0x4da6ff, 10: 0xffd23e, 25: 0xd36bff };
 export const GEM_TIERS = [25, 10, 5, 2, 1];
 
@@ -66,20 +82,71 @@ export function makeVase() {
 
 export function makeChest() {
   const g = new THREE.Group();
-  g.add(mesh(new THREE.BoxGeometry(1.1, 0.55, 0.7), M(0x7b4a2a), 0, 0.28, 0));
-  const lid = new THREE.Group(); lid.position.set(0, 0.56, -0.35); g.add(lid);
-  lid.add(mesh(new THREE.CylinderGeometry(0.35, 0.35, 1.1, 8, 1, false, 0, Math.PI).rotateZ(Math.PI / 2).rotateY(0), M(0x8a5530), 0, 0, 0.35));
-  g.add(mesh(new THREE.BoxGeometry(0.16, 0.2, 0.06), M(0xffd23e), 0, 0.5, 0.36));
+  const wood = M(0x7b4a2a), wood2 = M(0x8e5a32), iron = M(0x3d3a4a), gold = M(0xffd23e);
+  // body (open top so the inside can glow when the lid lifts)
+  g.add(mesh(new THREE.BoxGeometry(1.14, 0.1, 0.74), wood, 0, 0.05, 0));
+  g.add(mesh(new THREE.BoxGeometry(1.1, 0.46, 0.08), wood, 0, 0.3, 0.33), mesh(new THREE.BoxGeometry(1.1, 0.46, 0.08), wood, 0, 0.3, -0.33));
+  g.add(mesh(new THREE.BoxGeometry(0.08, 0.46, 0.7), wood, 0.51, 0.3, 0), mesh(new THREE.BoxGeometry(0.08, 0.46, 0.7), wood, -0.51, 0.3, 0));
+  for (const x of [-0.34, 0.34]) g.add(mesh(new THREE.BoxGeometry(0.1, 0.5, 0.8), iron, x, 0.29, 0));
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) g.add(mesh(ico(0.06, 0), gold, 0.55 * sx, 0.5, 0.36 * sz), mesh(ico(0.06, 0), gold, 0.55 * sx, 0.08, 0.36 * sz));
+  // treasure inside: golden glow plane + a little heap of gold
+  const inner = mesh(new THREE.BoxGeometry(1.0, 0.04, 0.6), new THREE.MeshBasicMaterial({ color: 0xffd23e }), 0, 0.46, 0); g.add(inner);
+  const heap = new THREE.Group(); heap.position.y = 0.5; heap.visible = false; g.add(heap);
+  for (let i = 0; i < 7; i++) { const c = mesh(ico(0.1 + (i % 3) * 0.02, 0), B(i % 2 ? 0xffe27a : 0xffc23e), (i - 3) * 0.13, (i % 3) * 0.04, Math.sin(i * 2) * 0.12); heap.add(c); }
+  // lid: half cylinder with iron straps and a lock plate, hinged at the back
+  const lid = new THREE.Group(); lid.position.set(0, 0.53, -0.34); g.add(lid);
+  const half = new THREE.CylinderGeometry(0.37, 0.37, 1.12, 10, 1, false, 0, Math.PI).rotateZ(Math.PI / 2);
+  lid.add(mesh(half, wood2, 0, 0, 0.34));
+  for (const x of [-0.34, 0.34]) lid.add(mesh(new THREE.CylinderGeometry(0.385, 0.385, 0.1, 10, 1, true, 0, Math.PI).rotateZ(Math.PI / 2).translate(x, 0, 0), iron, 0, 0, 0.34));
+  lid.add(mesh(new THREE.BoxGeometry(0.2, 0.22, 0.06), gold, 0, 0.0, 0.73));
+  lid.add(mesh(ico(0.04, 0), B(0x2a1a0a), 0, -0.02, 0.77));
+  // glow
+  const glow = glowSprite(0xffd860, 0.1, 0); glow.position.y = 0.75; g.add(glow);
+  const rays = glowSprite(0xfff2b0, 0.1, 0); rays.position.y = 1.1; g.add(rays);
   g.userData.lid = lid;
+  g.userData.setOpen = (k, t) => {
+    const e = 1 - Math.pow(1 - k, 3), over = k >= 1 ? Math.sin(t * 5) * 0.02 : Math.sin(k * Math.PI) * 0.12;
+    lid.rotation.x = -(1.95 * e + over);
+    heap.visible = k > 0.15; heap.position.y = 0.5 + e * 0.12;
+    glow.material.opacity = Math.min(0.95, k * 1.2) * (0.85 + Math.sin(t * 4) * 0.1); glow.scale.setScalar(0.6 + e * 2.6);
+    rays.material.opacity = Math.min(0.7, k) * (0.7 + Math.sin(t * 6) * 0.2); rays.scale.setScalar(0.4 + e * 1.6);
+  };
+  // closed chests give off a faint golden shimmer so they read as treasure
+  g.userData.shimmer = (t) => { glow.material.opacity = 0.14 + Math.sin(t * 2.4) * 0.07; glow.scale.setScalar(1.3 + Math.sin(t * 2.4) * 0.1); };
   return g;
 }
 
+// A wrought-iron pole light: stone foot, banded pole, glass lantern with a flame inside, roof and finial.
+// Dark and cool until you touch or flame it (then it lights, pools gold light on the ground and becomes a checkpoint).
 export function makeLantern() {
   const g = new THREE.Group();
-  g.add(mesh(new THREE.CylinderGeometry(0.06, 0.09, 1.7, 6), M(0x5b4a6b), 0, 0.85, 0));
-  const lamp = mesh(ico(0.24, 1), B(0x6a6f8a), 0, 1.85, 0); g.add(lamp);
-  g.add(mesh(new THREE.ConeGeometry(0.3, 0.24, 6), M(0x3a3050), 0, 2.15, 0));
-  g.userData.lamp = lamp;
+  const stone = M(0x6c6480), iron = M(0x2e2a3c), gold = M(0xffd36a), roof = M(0x3b3052);
+  g.add(mesh(new THREE.CylinderGeometry(0.34, 0.42, 0.22, 8), stone, 0, 0.11, 0));
+  g.add(mesh(new THREE.CylinderGeometry(0.22, 0.32, 0.22, 8), M(0x857c9c), 0, 0.33, 0));
+  g.add(mesh(new THREE.CylinderGeometry(0.05, 0.075, 1.75, 8), iron, 0, 1.2, 0));
+  for (const y of [0.55, 1.2, 1.85]) g.add(mesh(new THREE.TorusGeometry(0.075, 0.025, 5, 10).rotateX(Math.PI / 2), gold, 0, y, 0));
+  // curled brackets under the lantern
+  for (const s of [-1, 1]) { const arm = mesh(new THREE.TorusGeometry(0.16, 0.02, 5, 10, Math.PI * 0.9), iron, 0.1 * s, 1.88, 0); arm.rotation.z = s > 0 ? 0.2 : Math.PI - 0.2; g.add(arm); }
+  const cage = new THREE.Group(); cage.position.y = 2.2; g.add(cage);
+  cage.add(mesh(new THREE.CylinderGeometry(0.22, 0.17, 0.08, 6), iron, 0, -0.27, 0));
+  const glassMat = new THREE.MeshBasicMaterial({ color: 0x5a6a90, transparent: true, opacity: 0.55, depthWrite: false });
+  cage.add(mesh(new THREE.CylinderGeometry(0.25, 0.2, 0.5, 6, 1, true), glassMat, 0, 0, 0));
+  for (let i = 0; i < 6; i++) { const a = (i / 6) * Math.PI * 2 + Math.PI / 6; cage.add(mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.52, 4), iron, Math.cos(a) * 0.235, 0, Math.sin(a) * 0.235)); }
+  const flameMat = new THREE.MeshBasicMaterial({ color: 0x7a86b0 });
+  const flame = mesh(new THREE.ConeGeometry(0.1, 0.32, 6), flameMat, 0, -0.03, 0); cage.add(flame);
+  cage.add(mesh(new THREE.ConeGeometry(0.34, 0.26, 6), roof, 0, 0.38, 0), mesh(new THREE.TorusGeometry(0.28, 0.03, 4, 6).rotateX(Math.PI / 2), gold, 0, 0.27, 0), mesh(ico(0.06, 0), gold, 0, 0.56, 0));
+  const halo = glowSprite(0xffc860, 2.2, 0); halo.position.y = 2.2; g.add(halo);
+  const hint = glowSprite(0x9ab4ff, 0.9, 0.3); hint.position.y = 2.2; g.add(hint);
+  const pool = mesh(new THREE.CircleGeometry(2.4, 24).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xffc860, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }), 0, 0.07, 0); g.add(pool);
+  g.userData.lamp = flame;
+  g.userData.setLit = (on) => { glassMat.color.setHex(on ? 0xffe9a8 : 0x5a6a90); glassMat.opacity = on ? 0.35 : 0.55; flameMat.color.setHex(on ? 0xfff0b0 : 0x7a86b0); hint.visible = !on; };
+  g.userData.tick = (t, lit, seed = 0) => {
+    if (!lit) { const p = 0.5 + Math.sin(t * 2 + seed) * 0.5; hint.material.opacity = 0.12 + p * 0.28; hint.scale.setScalar(0.8 + p * 0.3); halo.material.opacity = 0; pool.material.opacity = 0; return; }
+    const f = 1 + Math.sin(t * 13 + seed) * 0.08 + Math.sin(t * 7.3 + seed) * 0.06;
+    flame.scale.set(f, 0.9 + (f - 1) * 3, f);
+    halo.material.opacity = 0.7 + Math.sin(t * 9 + seed) * 0.08; halo.scale.setScalar(2.3 * f);
+    pool.material.opacity = 0.2 + Math.sin(t * 11 + seed) * 0.03;
+  };
   return g;
 }
 
@@ -125,21 +192,6 @@ function mothWingGeometry() {
   mothWing = g;
   return g;
 }
-
-// ---- shared soft glow sprite texture
-let _glowTex = null;
-function glowTex() {
-  if (_glowTex) return _glowTex;
-  const c = document.createElement('canvas'); c.width = c.height = 64;
-  const x = c.getContext('2d'); const gr = x.createRadialGradient(32, 32, 0, 32, 32, 32);
-  gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.3, 'rgba(255,255,255,0.5)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
-  x.fillStyle = gr; x.fillRect(0, 0, 64, 64);
-  _glowTex = new THREE.CanvasTexture(c); return _glowTex;
-}
-const glowSprite = (color, scale, opacity = 1) => {
-  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex(), color, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity }));
-  s.scale.setScalar(scale); return s;
-};
 
 export function makeMoth() {
   const g = new THREE.Group();
