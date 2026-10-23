@@ -310,8 +310,8 @@ export class Game {
         }
         case 'gate': {
           if (th.opening) {
-            th.open += dt / 1.2; th.mesh.position.y = th.y - th.open * (th.hh + 0.6);
-            if (th.open >= 1) { this.world.removeBox(th.box); th.alive = false; th.mesh.visible = false; }
+            th.open = Math.min(1, th.open + dt / 1.3); th.mesh.userData.setOpen(th.open);
+            if (th.open >= 1) { this.world.removeBox(th.box); th.alive = false; }
           }
           break;
         }

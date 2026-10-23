@@ -20,8 +20,8 @@ function landmark(kind, n, theme) {
     box(-3, -0.5, -3, 3, 11, 3, 0x6a5a7a, 0xffd36a); box(-4, 11, -4, 4, 12.2, 4, 0x4a3a5a, 0xffd36a); box(-2.4, 12.2, -2.4, 2.4, 14, 2.4, 0x7a6a8a, 0xffd36a); box(-1.4, 14, -1.4, 1.4, 17, 1.4, 0xc4533f, 0x6a2a20);
     box(-1.6, 7, 3, 1.6, 10, 3.3, 0xfff2c0, 0xffd36a);
   } else if (kind === 'gate') {
-    box(-9, -0.5, -2.5, -5, 15, 2.5, 0x3a2a48, 0xff5a7a); box(5, -0.5, -2.5, 9, 15, 2.5, 0x3a2a48, 0xff5a7a); box(-9, 12, -2.5, 9, 15, 2.5, 0x4a3a58, 0xff5a7a);
-    box(-9.6, 15, -3, -4.4, 19, 3, 0x2e2038, 0xff9a5a); box(4.4, 15, -3, 9.6, 19, 3, 0x2e2038, 0xff9a5a);
+    // collision for the two stone legs only; the arch itself (decor 'archgate') can be walked through
+    for (const sx of [-1, 1]) B.push({ min: [x + sx * 7.2 - 1.3, y - 0.5, z - 1.6], max: [x + sx * 7.2 + 1.3, y + 12, z + 1.6], hidden: true });
   }
   return B;
 }
@@ -56,6 +56,7 @@ export function makeHub(o) {
       { t: 'pile', n: 14, v: 1, where: 'any', count: 6 }, { t: 'pile', n: 5, v: 2, where: 'any', count: 5 }, { t: 'ring', n: 3, v: 1, count: 10, r: 2.4 },
       { t: 'crate', n: 5, gems: [1, 1, 2], where: 'any' }, { t: 'vase', n: 5, gems: [1, 2], where: 'any' }, { t: 'moth', n: 5 },
     ],
+    decor: o.landmark === 'gate' ? () => [{ k: 'archgate', x: nodes.landHill.x, y: nodes.landHill.h, z: nodes.landHill.z, s: 1.6, ry: 0, v: 0.5 }] : undefined,
     trails: 1, scatter: o.scatter || SCATTER[o.themeKey] || [],
   };
 }

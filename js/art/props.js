@@ -64,21 +64,37 @@ export function makeGemInstances(count) {
 
 export function makeCrate() {
   const g = new THREE.Group();
-  g.add(mesh(new THREE.BoxGeometry(0.9, 0.9, 0.9), M(0xc98a4b), 0, 0.45, 0));
-  const frame = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(0.92, 0.92, 0.92)), new THREE.LineBasicMaterial({ color: 0x6b3f1a }));
-  frame.position.y = 0.45; g.add(frame);
-  g.add(mesh(new THREE.BoxGeometry(0.96, 0.12, 0.96), M(0x8a5a2b), 0, 0.88, 0));
-  g.add(mesh(new THREE.BoxGeometry(0.96, 0.12, 0.96), M(0x8a5a2b), 0, 0.12, 0));
+  const plank = M(0xc98a4b), plank2 = M(0xb67a40), dark = M(0x6b3f1a), iron = M(0x3d3a4a);
+  g.add(mesh(new THREE.BoxGeometry(0.88, 0.88, 0.88), plank2, 0, 0.45, 0));
+  // slatted faces: raised planks on every side
+  for (const [rx, rz, ry] of [[0, 0.45, 0], [0, -0.45, 0], [0.45, 0, Math.PI / 2], [-0.45, 0, Math.PI / 2]]) {
+    for (let i = 0; i < 3; i++) { const p = mesh(new THREE.BoxGeometry(0.88, 0.26, 0.05), i % 2 ? plank : plank2, 0, 0.18 + i * 0.28, 0); const holder = new THREE.Group(); holder.position.set(rx, 0, rz); holder.rotation.y = ry; holder.add(p); g.add(holder); }
+  }
+  // corner posts, iron straps and an X brace on the front
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) g.add(mesh(new THREE.BoxGeometry(0.1, 0.92, 0.1), dark, 0.44 * sx, 0.46, 0.44 * sz));
+  for (const y of [0.1, 0.8]) g.add(mesh(new THREE.BoxGeometry(0.94, 0.06, 0.94), iron, 0, y, 0));
+  for (const s of [-1, 1]) { const b = mesh(new THREE.BoxGeometry(0.06, 1.0, 0.04), dark, 0, 0.45, 0.47); b.rotation.z = s * 0.62; g.add(b); }
+  g.add(mesh(new THREE.BoxGeometry(0.98, 0.1, 0.98), dark, 0, 0.9, 0));
   return g;
 }
 
+// A glazed clay pot: foot ring, round belly with a painted band, narrow neck, flared lip and two loop handles.
+const POT_GLAZES = [[0x5b86d8, 0xffd23e], [0xd9784a, 0x3b2a1a], [0x3fae96, 0xf4f0d8], [0x9a62c8, 0xffe27a], [0xc94a5a, 0xf4f0d8]];
 export function makeVase() {
   const g = new THREE.Group();
-  const prof = [[0.0, 0], [0.32, 0.02], [0.46, 0.28], [0.4, 0.6], [0.24, 0.82], [0.3, 0.95], [0.0, 0.95]].map(([x, y]) => new THREE.Vector2(x, y));
-  g.add(mesh(new THREE.LatheGeometry(prof, 10), M(0x6f9bff, { side: THREE.DoubleSide })));
-  g.add(mesh(new THREE.TorusGeometry(0.33, 0.04, 5, 12), M(0xffd23e), 0, 0.5, 0).rotateX(Math.PI / 2));
+  const [glaze, trim] = POT_GLAZES[Math.floor(Math.random() * POT_GLAZES.length)];
+  const prof = [[0, 0], [0.22, 0], [0.27, 0.05], [0.4, 0.2], [0.5, 0.42], [0.47, 0.62], [0.33, 0.8], [0.22, 0.92], [0.2, 1.02], [0.3, 1.1], [0.3, 1.16], [0.22, 1.12], [0.14, 1.0], [0, 0.9]].map(([x, y]) => new THREE.Vector2(x, y));
+  g.add(mesh(new THREE.LatheGeometry(prof, 10), M(glaze, { side: THREE.DoubleSide }), 0, 0, 0));
+  g.add(mesh(new THREE.TorusGeometry(0.485, 0.04, 5, 14).rotateX(Math.PI / 2), M(trim), 0, 0.45, 0));
+  g.add(mesh(new THREE.TorusGeometry(0.44, 0.03, 5, 14).rotateX(Math.PI / 2), M(trim), 0, 0.56, 0));
+  g.add(mesh(new THREE.TorusGeometry(0.3, 0.035, 5, 12).rotateX(Math.PI / 2), M(trim), 0, 1.14, 0));
+  // zig-zag pattern band
+  for (let i = 0; i < 10; i++) { const a = (i / 10) * Math.PI * 2; const t = mesh(new THREE.ConeGeometry(0.05, 0.1, 3), M(trim), Math.cos(a) * 0.49, 0.5 + (i % 2) * 0.03, Math.sin(a) * 0.49); t.rotation.set(0, -a, Math.PI / 2); t.lookAt(Math.cos(a) * 2, 0.5, Math.sin(a) * 2); g.add(t); }
+  for (const s of [-1, 1]) { const h = mesh(new THREE.TorusGeometry(0.15, 0.035, 5, 8, Math.PI), M(shadeHex(glaze, 0.85)), 0.26 * s, 0.9, 0); h.rotation.z = s > 0 ? -Math.PI / 2 : Math.PI / 2; h.rotation.y = 0; g.add(h); }
+  g.rotation.y = Math.random() * 6.28;
   return g;
 }
+const shadeHex = (hex, k) => new THREE.Color(hex).multiplyScalar(k).getHex();
 
 export function makeChest() {
   const g = new THREE.Group();
@@ -303,18 +319,46 @@ export function makeSpring() {
   return g;
 }
 
+// Stone: a rough-laid wall of irregular blocks with a glowing crack (it will smash). Ice: a cluster of frozen crystal spikes.
 export function makeBarrier(w, h, d, by) {
-  const g = new THREE.Group();
-  const ice = by === 'flame';
-  const m = ice ? new THREE.MeshLambertMaterial({ color: 0xaee8ff, flatShading: true, transparent: true, opacity: 0.78, emissive: 0x2a7a9a }) : M(0x9a8f86);
-  g.add(mesh(new THREE.BoxGeometry(w, h, d), m, 0, h / 2, 0));
-  if (!ice) {
-    const rows = Math.max(1, Math.round(h / 0.9));
-    for (let i = 1; i < rows; i++) g.add(mesh(new THREE.BoxGeometry(w + 0.04, 0.05, d + 0.04), M(0x5a524c), 0, (h / rows) * i, 0));
-    g.add(mesh(new THREE.BoxGeometry(w * 0.5, h * 0.55, d + 0.1), M(0xc9bdb2), 0, h / 2, 0));
-  } else {
-    g.add(new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(w, h, d)), new THREE.LineBasicMaterial({ color: 0xffffff })).translateY(h / 2));
+  const g = new THREE.Group(), root = new THREE.Group(); g.add(root);
+  const along = w >= d, span = along ? w : d, thick = along ? d : w;
+  if (!along) root.rotation.y = Math.PI / 2;
+  if (by === 'flame') {
+    const mat = new THREE.MeshLambertMaterial({ color: 0xaee8ff, flatShading: true, transparent: true, opacity: 0.82, emissive: 0x2a7a9a });
+    const inner = new THREE.MeshBasicMaterial({ color: 0xe8fbff, transparent: true, opacity: 0.35, depthWrite: false });
+    root.add(mesh(new THREE.BoxGeometry(span, 0.35, thick + 0.4), mat, 0, 0.17, 0));
+    const n = Math.max(5, Math.round(span / 0.9));
+    for (let i = 0; i < n; i++) {
+      const u = (i + 0.5) / n - 0.5, hh = h * (0.55 + 0.45 * Math.abs(Math.sin(i * 2.3 + 1))) * (1 - Math.abs(u) * 0.35), rr = 0.5 + 0.18 * Math.abs(Math.cos(i * 1.7));
+      const c = mesh(new THREE.ConeGeometry(rr, hh, 5), mat, u * span, hh / 2 + 0.2, Math.sin(i * 3.1) * thick * 0.3); c.rotation.z = Math.sin(i * 1.9) * 0.12; c.rotation.x = Math.cos(i * 2.7) * 0.1; root.add(c);
+      root.add(mesh(new THREE.ConeGeometry(rr * 0.45, hh * 0.8, 5), inner, c.position.x, hh * 0.45 + 0.2, c.position.z));
+    }
+    return g;
   }
+  const stones = [M(0x8e8480), M(0x9a908a), M(0x7f7672), M(0xa39a92)], mortar = M(0x5a524c);
+  const rows = Math.max(3, Math.round(h / 0.85)), rh = h / rows;
+  root.add(mesh(new THREE.BoxGeometry(span, h, thick * 0.7), mortar, 0, h / 2, 0));
+  for (let r = 0; r < rows; r++) {
+    let x = -span / 2 + (r % 2 ? 0.45 : 0), i = 0;
+    while (x < span / 2 - 0.05) {
+      const bw = Math.min(span / 2 - x, 0.85 + 0.55 * Math.abs(Math.sin(r * 5.1 + i * 2.3))), hh = rh - 0.06 - 0.05 * Math.abs(Math.cos(i + r));
+      const b = mesh(new THREE.BoxGeometry(bw - 0.05, hh, thick * (0.9 + 0.12 * Math.sin(i * 3 + r))), stones[(i + r) % 4], x + bw / 2, r * rh + rh / 2, 0);
+      b.rotation.y = Math.sin(i * 7 + r) * 0.03; b.rotation.z = Math.sin(i * 4 + r * 2) * 0.02; root.add(b);
+      x += bw; i++;
+    }
+  }
+  // glowing crack zig-zag across the middle, front and back: "charge here"
+  const crack = new THREE.MeshBasicMaterial({ color: 0xffa34a });
+  for (const z of [thick * 0.5 + 0.02, -thick * 0.5 - 0.02]) {
+    let px = -0.3, py = h * 0.15;
+    for (let i = 0; i < 7; i++) {
+      const nx = px + (i % 2 ? -0.28 : 0.3), ny = py + h * 0.11;
+      const seg = mesh(new THREE.BoxGeometry(0.06, Math.hypot(nx - px, ny - py) + 0.04, 0.03), crack, (px + nx) / 2, (py + ny) / 2, z);
+      seg.rotation.z = Math.atan2(nx - px, ny - py) * -1; root.add(seg); px = nx; py = ny;
+    }
+  }
+  root.add(mesh(new THREE.BoxGeometry(span + 0.3, 0.22, thick + 0.2), mortar, 0, h + 0.05, 0));
   return g;
 }
 
@@ -361,16 +405,38 @@ export function makeBrazier() {
   return g;
 }
 
+// A stone gateway with a rising iron portcullis: two capped pillars, a heavy lintel with a keystone, and iron bars.
+// The portcullis retracts up into the lintel when the braziers are lit (userData.setOpen(k), k in 0..1).
 export function makeGate(w, h, d) {
-  const g = new THREE.Group();
-  const bars = Math.max(2, Math.round(Math.max(w, d) / 0.7));
-  const along = w >= d;
-  for (let i = 0; i <= bars; i++) {
-    const t = (i / bars - 0.5) * (along ? w : d);
-    g.add(mesh(new THREE.CylinderGeometry(0.07, 0.07, h, 5), M(0x494f66), along ? t : 0, h / 2, along ? 0 : t));
+  const g = new THREE.Group(), root = new THREE.Group(); g.add(root);
+  const along = w >= d, span = along ? w : d;
+  if (!along) root.rotation.y = Math.PI / 2;
+  const stone = M(0x7a7490), stone2 = M(0x948eaa), dark = M(0x58526c), iron = M(0x2c2d3c), gold = M(0xffd36a);
+  const px = span / 2 - 0.6;
+  for (const s of [-1, 1]) {
+    root.add(mesh(new THREE.BoxGeometry(1.5, 0.5, 1.5), dark, s * px, 0.1, 0));
+    root.add(mesh(new THREE.CylinderGeometry(0.5, 0.58, h + 0.4, 8), stone2, s * px, (h + 0.4) / 2 + 0.3, 0));
+    root.add(mesh(new THREE.CylinderGeometry(0.66, 0.5, 0.3, 8), stone, s * px, h + 0.85, 0));
+    root.add(mesh(new THREE.BoxGeometry(1.5, 0.22, 1.5), stone, s * px, h + 1.1, 0));
+    root.add(mesh(ico(0.22, 1), gold, s * px, h + 1.4, 0));
+    for (const y of [0.9, h * 0.55]) root.add(mesh(new THREE.TorusGeometry(0.52, 0.05, 5, 12).rotateX(Math.PI / 2), dark, s * px, y, 0));
   }
-  g.add(mesh(new THREE.BoxGeometry(along ? w : 0.18, 0.14, along ? 0.18 : d), M(0x7f86a5), 0, h - 0.1, 0));
-  g.add(mesh(new THREE.BoxGeometry(along ? w : 0.18, 0.14, along ? 0.18 : d), M(0x7f86a5), 0, 0.3, 0));
+  // lintel with a keystone and a row of teeth
+  root.add(mesh(new THREE.BoxGeometry(span - 0.4, 0.8, 1.3), stone, 0, h + 0.55, 0));
+  root.add(mesh(new THREE.BoxGeometry(1.2, 1.15, 1.45), stone2, 0, h + 0.62, 0));
+  root.add(mesh(new THREE.BoxGeometry(0.5, 0.4, 0.1), gold, 0, h + 0.66, 0.76));
+  for (let i = -3; i <= 3; i++) if (i) root.add(mesh(new THREE.BoxGeometry(0.34, 0.2, 1.34), dark, i * (span - 2.4) / 6.5, h + 1.05, 0));
+  // portcullis (pivot at the underside of the lintel so scale.y retracts it upward)
+  const port = new THREE.Group(); port.position.set(0, h + 0.15, 0); root.add(port);
+  const inner = span - 2 * 0.6 - 1.0, bars = Math.max(4, Math.round(inner / 0.5));
+  for (let i = 0; i <= bars; i++) {
+    const x = (i / bars - 0.5) * inner;
+    port.add(mesh(new THREE.CylinderGeometry(0.055, 0.055, h + 0.1, 5), iron, x, -h / 2, 0));
+    port.add(mesh(new THREE.ConeGeometry(0.075, 0.28, 5).rotateX(Math.PI), iron, x, -h - 0.06, 0));
+  }
+  for (const y of [0.15, h * 0.45, h * 0.8]) port.add(mesh(new THREE.BoxGeometry(inner + 0.1, 0.1, 0.14), iron, 0, -y - 0.05, 0));
+  port.add(mesh(new THREE.BoxGeometry(0.9, 0.5, 0.18), M(0x3e3a52), 0, -h * 0.5, 0.06), mesh(ico(0.14, 0), gold, 0, -h * 0.5, 0.16));
+  g.userData.setOpen = (k) => { const e = k * k * (3 - 2 * k); port.scale.y = Math.max(0.03, 1 - e * 0.97); port.position.y = h + 0.15; };
   return g;
 }
 

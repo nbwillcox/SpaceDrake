@@ -3,7 +3,7 @@ export const THEMES = {
   mossgate: {
     grass: 0x58c76a, grass2: 0x7ad98a, rock: 0x9aa2b5, sand: 0xe6d79b, sandBelow: -0.3,
     sky: [0x3b8fff, 0xbfeaff], fog: 0xc4ecff, fogNear: 70, fogFar: 190, water: 0x3fb8ff,
-    palette: { leaf: 0x2fae5a, leaf2: 0x46c870, trunk: 0x8a5a33 },
+    palette: { leaf: 0x2fae5a, leaf2: 0x46c870, trunk: 0x7a4f2e, moss: 0x5fae5c },
   },
   forge: {
     grass: 0x8a5a44, grass2: 0xa26a4c, rock: 0x5a4a52, sand: 0x3a2a2a, sandBelow: -0.2,
@@ -41,14 +41,14 @@ export const THEMES = {
 export const SCATTER = {
   mossgate: [
     { k: 'tree', n: 40, where: 'low', solid: 0.7, spacing: 8, maxSlope: 0.22 }, { k: 'roundtree', n: 30, where: 'low', solid: 0.7, spacing: 8, maxSlope: 0.22 },
-    { k: 'rock', n: 30, where: 'any', solid: 0.9, spacing: 7 }, { k: 'flower', n: 220, where: 'low' }, { k: 'tuft', n: 260, where: 'any', s0: 0.8, s1: 1.5 }, { k: 'tree', n: 60, where: 'any', minH: 14, s0: 1.4, s1: 2.2 },
+    { k: 'rock', n: 30, where: 'any', solid: 0.9, spacing: 7 }, { k: 'ruin', n: 4, where: 'any', spacing: 20, solid: 1.1 }, { k: 'flower', n: 220, where: 'low' }, { k: 'tuft', n: 260, where: 'any', s0: 0.8, s1: 1.5 }, { k: 'tree', n: 60, where: 'any', minH: 14, s0: 1.4, s1: 2.2 },
   ],
   forge: [
     { k: 'rock', n: 70, where: 'any', solid: 0.9, spacing: 6, s0: 0.9, s1: 1.8 }, { k: 'crystal', n: 28, where: 'any', spacing: 11, s0: 0.8, s1: 1.5 },
-    { k: 'pillar', n: 14, where: 'any', spacing: 20, solid: 1.0, s0: 0.9, s1: 1.2 }, { k: 'tuft', n: 90, where: 'any', s0: 0.5, s1: 1 }, { k: 'lamppost', n: 10, where: 'any', spacing: 18 },
+    { k: 'pillar', n: 8, where: 'any', spacing: 20, solid: 1.0, s0: 0.9, s1: 1.2 }, { k: 'ruin', n: 8, where: 'any', spacing: 14, solid: 1.1 }, { k: 'tuft', n: 90, where: 'any', s0: 0.5, s1: 1 }, { k: 'lamppost', n: 10, where: 'any', spacing: 18 },
   ],
   sky: [
-    { k: 'roundtree', n: 40, where: 'any', solid: 0.7, spacing: 8, maxSlope: 0.22 }, { k: 'pillar', n: 14, where: 'any', spacing: 16, solid: 1.0 },
+    { k: 'roundtree', n: 40, where: 'any', solid: 0.7, spacing: 8, maxSlope: 0.22 }, { k: 'pillar', n: 8, where: 'any', spacing: 16, solid: 1.0 }, { k: 'ruin', n: 7, where: 'any', spacing: 14, solid: 1.1 },
     { k: 'crystal', n: 24, where: 'any', spacing: 12 }, { k: 'tuft', n: 240, where: 'any', s0: 0.8, s1: 1.4 }, { k: 'flower', n: 140, where: 'any' },
   ],
   crystal: [
@@ -56,11 +56,11 @@ export const SCATTER = {
     { k: 'rock', n: 40, where: 'any', solid: 0.9, spacing: 7 }, { k: 'tuft', n: 160, where: 'any', s0: 0.8, s1: 1.2 },
   ],
   night: [
-    { k: 'lamppost', n: 26, where: 'any', spacing: 12 }, { k: 'pillar', n: 18, where: 'any', spacing: 14, solid: 1.0 },
+    { k: 'lamppost', n: 26, where: 'any', spacing: 12 }, { k: 'pillar', n: 10, where: 'any', spacing: 14, solid: 1.0 }, { k: 'ruin', n: 8, where: 'any', spacing: 12, solid: 1.1 },
     { k: 'rock', n: 36, where: 'any', solid: 0.9, spacing: 8 }, { k: 'tree', n: 24, where: 'any', solid: 0.7, spacing: 10, maxSlope: 0.22 }, { k: 'tuft', n: 90, where: 'any', s0: 0.6, s1: 1.1 },
   ],
   keep: [
-    { k: 'pillar', n: 26, where: 'any', spacing: 12, solid: 1.1, s0: 1.0, s1: 1.5 }, { k: 'crystal', n: 26, where: 'any', spacing: 12 },
+    { k: 'pillar', n: 14, where: 'any', spacing: 12, solid: 1.1, s0: 1.0, s1: 1.5 }, { k: 'ruin', n: 12, where: 'any', spacing: 11, solid: 1.1, s0: 1.0, s1: 1.4 }, { k: 'crystal', n: 26, where: 'any', spacing: 12 },
     { k: 'rock', n: 50, where: 'any', solid: 0.9, spacing: 7 }, { k: 'lamppost', n: 14, where: 'any', spacing: 16 },
   ],
 };
