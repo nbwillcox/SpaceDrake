@@ -15,40 +15,40 @@ export function createDragon() {
 
   // ---- body
   const body = new THREE.Group(); body.position.y = 0.44; rig.add(body);
-  const torso = mesh(ico(0.34, 2), teal); torso.scale.set(1, 0.84, 1.4); body.add(ink(torso, 0.055));
+  const torso = mesh(ico(0.34, 2), teal); torso.scale.set(0.86, 0.76, 1.55); body.add(ink(torso, 0.055));
   // belly: amber plates down the underside
-  const belly = mesh(ico(0.3, 2), amber, 0, -0.09, 0.05); belly.scale.set(0.82, 0.62, 1.28); body.add(belly);
+  const belly = mesh(ico(0.3, 2), amber, 0, -0.09, 0.05); belly.scale.set(0.7, 0.55, 1.4); body.add(belly);
   for (let i = 0; i < 5; i++) {
     const p = mesh(ico(0.2, 1), amberD, 0, -0.2 + i * 0.002, 0.34 - i * 0.14);
-    p.scale.set(0.62 - i * 0.03, 0.2, 0.2); body.add(p);
+    p.scale.set(0.52 - i * 0.03, 0.2, 0.2); body.add(p);
   }
 
   // ---- neck + head
   const neck = new THREE.Group(); neck.position.set(0, 0.14, 0.34); body.add(neck);
   const neckMesh = mesh(ico(0.17, 1), teal, 0, 0.04, 0.05); neckMesh.scale.set(1, 1.05, 1.25); neck.add(neckMesh);
-  const head = new THREE.Group(); head.position.set(0, 0.13, 0.13); neck.add(head);
-  const skull = mesh(ico(0.23, 2), teal, 0, 0.02, 0); skull.scale.set(1.04, 0.96, 1); head.add(ink(skull, 0.06));
-  const snout = mesh(ico(0.14, 2), tealL, 0, -0.06, 0.24); snout.scale.set(0.95, 0.7, 1.38); head.add(ink(snout, 0.07));
+  const head = new THREE.Group(); head.position.set(0, 0.17, 0.15); head.scale.setScalar(1.3); neck.add(head);
+  const skull = mesh(ico(0.25, 2), teal, 0, 0.03, 0); skull.scale.set(1.12, 1.0, 0.98); head.add(ink(skull, 0.06));
+  const snout = mesh(ico(0.14, 2), tealL, 0, -0.07, 0.2); snout.scale.set(1.0, 0.7, 1.05); head.add(ink(snout, 0.07));
   // nostrils on the snout tip
-  for (const s of [-1, 1]) head.add(mesh(sph(0.021, 6, 5), Bm(0x0d3b3a), 0.05 * s, -0.025, 0.425));
+  for (const s of [-1, 1]) head.add(mesh(sph(0.021, 6, 5), Bm(0x0d3b3a), 0.045 * s, -0.03, 0.31));
   // upper cheek patch + brow ridge give the face structure
   
   for (const s of [-1, 1]) {
-    eye(head, 0.125 * s, 0.07, 0.15, 0.72, 0xd98a1f, 1);
-    brow(head, 0.13 * s, 0.14, 0.17, 0.1, tealD, 0.22, s);
+    eye(head, 0.125 * s, 0.09, 0.15, 1.1, 0xe0891a, 1);
+    brow(head, 0.13 * s, 0.215, 0.18, 0.13, tealD, 0.25, s);
     // curved horn: two cones so it sweeps back
-    const h1 = mesh(cone(0.052, 0.17, 6), horn, 0.115 * s, 0.22, -0.05); h1.rotation.x = -0.55; h1.rotation.z = -0.2 * s; head.add(h1);
-    const h2 = mesh(cone(0.034, 0.15, 6), horn, 0.145 * s, 0.33, -0.15); h2.rotation.x = -1.05; h2.rotation.z = -0.35 * s; head.add(h2);
+    const h1 = mesh(cone(0.06, 0.24, 6), horn, 0.12 * s, 0.24, -0.04); h1.rotation.x = -0.55; h1.rotation.z = -0.2 * s; head.add(h1);
+    const h2 = mesh(cone(0.04, 0.2, 6), horn, 0.15 * s, 0.38, -0.16); h2.rotation.x = -1.05; h2.rotation.z = -0.35 * s; head.add(h2);
     // ear fin
     const ear = mesh(cone(0.045, 0.2, 4), tealL, 0.2 * s, 0.0, -0.08); ear.rotation.z = -1.25 * s; ear.rotation.x = -0.5; ear.scale.z = 0.4; head.add(ear);
     // blush cheek
-    head.add(mesh(ico(0.045, 1), pink, 0.185 * s, -0.045, 0.1));
+    head.add(mesh(ico(0.05, 1), pink, 0.21 * s, -0.06, 0.1));
   }
   // lower jaw (rotates open to breathe fire) with a tongue and two little fangs
   const jaw = new THREE.Group(); jaw.position.set(0, -0.14, 0.1); head.add(jaw);
-  const jawM = mesh(ico(0.1, 1), tealD, 0, 0, 0.1); jawM.scale.set(0.95, 0.42, 1.5); jaw.add(jawM);
-  const tongue = mesh(ico(0.06, 1), pink, 0, 0.015, 0.12); tongue.scale.set(0.9, 0.35, 1.4); jaw.add(tongue);
-  for (const s of [-1, 1]) { const f = mesh(cone(0.014, 0.05, 4), cream, 0.05 * s, 0.045, 0.2); f.rotation.x = Math.PI; jaw.add(f); }
+  const jawM = mesh(ico(0.1, 1), tealD, 0, 0, 0.08); jawM.scale.set(0.95, 0.42, 1.2); jaw.add(jawM);
+  const tongue = mesh(ico(0.06, 1), pink, 0, 0.015, 0.1); tongue.scale.set(0.9, 0.35, 1.4); jaw.add(tongue);
+  for (const s of [-1, 1]) { const f = mesh(cone(0.014, 0.05, 4), cream, 0.05 * s, 0.045, 0.15); f.rotation.x = Math.PI; jaw.add(f); }
 
   // ---- back crest: graduated spikes that continue onto the tail
   const crest = [];
@@ -71,17 +71,17 @@ export function createDragon() {
   legAt(0.18, 0.25); legAt(-0.18, 0.25); legAt(0.18, -0.25); legAt(-0.18, -0.25);
 
   // ---- wings: arm + elbow, four fingers, scalloped membrane with an amber edge
-  const WS = 1.7;
+  const WS = 2.1;
   const V = (x, y, z) => new THREE.Vector3(x * WS, y * WS, z * WS);
   const P = {
-    root: V(0, 0, 0), elbow: V(0.32, 0.18, -0.02),
-    tipA: V(0.68, 0.24, -0.08), tipB: V(0.6, 0.02, -0.34), tipC: V(0.36, -0.03, -0.4), tipD: V(0.1, 0, -0.3),
+    root: V(0, 0, 0), elbow: V(0.28, 0.24, -0.04),
+    tipA: V(0.8, 0.5, -0.16), tipB: V(0.84, 0.18, -0.46), tipC: V(0.58, -0.02, -0.58), tipD: V(0.26, -0.04, -0.46),
   };
   const mid = (a, b, pull) => a.clone().add(b).multiplyScalar(0.5).lerp(P.root, pull);
-  const m1 = mid(P.tipA, P.tipB, 0.22), m2 = mid(P.tipB, P.tipC, 0.26), m3 = mid(P.tipC, P.tipD, 0.24);
+  const m1 = mid(P.tipA, P.tipB, 0.34), m2 = mid(P.tipB, P.tipC, 0.36), m3 = mid(P.tipC, P.tipD, 0.34);
   const ring = [P.tipA, m1, P.tipB, m2, P.tipC, m3, P.tipD];
   const pos = [], col = [];
-  const cRoot = new THREE.Color(0x23d8c0), cEdge = new THREE.Color(0xffc15a);
+  const cRoot = new THREE.Color(0x1aa8c8), cEdge = new THREE.Color(0xff9a3e);
   const push = (v, c) => { pos.push(v.x, v.y, v.z); col.push(c.r, c.g, c.b); };
   for (let i = 0; i < ring.length - 1; i++) { push(P.root, cRoot); push(ring[i], cEdge); push(ring[i + 1], cEdge); }
   // fill the arm side so the leading edge has membrane too
@@ -103,25 +103,26 @@ export function createDragon() {
     const pivot = new THREE.Group(); pivot.position.set(0.16 * s, 0.24, 0.02); body.add(pivot);
     const inner = new THREE.Group(); inner.scale.x = s; pivot.add(inner);
     inner.add(mesh(wingGeo, wingMat));
-    inner.add(bone(P.root, P.elbow, 0.03, amberD), bone(P.elbow, P.tipA, 0.022, amberD));
+    inner.add(bone(P.root, P.elbow, 0.034, amberD), bone(P.elbow, P.tipA, 0.025, amberD), bone(P.root, P.tipB, 0.014, amberD));
     inner.add(bone(P.elbow, P.tipB, 0.016, amberD), bone(P.root, P.tipC, 0.014, amberD), bone(P.root, P.tipD, 0.012, amberD));
-    inner.add(mesh(cone(0.03, 0.09, 4), cream, P.tipA.x + 0.03, P.tipA.y + 0.02, P.tipA.z - 0.01).rotateZ(-1.2));
+    inner.add(mesh(cone(0.035, 0.14, 4), cream, P.tipA.x + 0.04, P.tipA.y + 0.05, P.tipA.z - 0.01).rotateZ(-0.9));
     wings.push(pivot);
   }
 
   // ---- tail: tapering segments with spikes, ending in a glowing spade
   const tail = [];
-  let parent = body, off = -0.4, rad = 0.17;
-  const N = 7;
+  let parent = body, off = -0.4, rad = 0.15;
+  const N = 10;
   for (let i = 0; i < N; i++) {
     const seg = new THREE.Group(); seg.position.set(0, i === 0 ? -0.03 : 0, off); parent.add(seg);
     const sm = mesh(ico(rad, 1), i > 3 ? tealD : teal, 0, 0, -rad * 0.6);
     seg.add(ink(sm, 0.07));
-    if (i > 0 && i < 6) { const sp = mesh(cone(0.04 - i * 0.004, 0.11 - i * 0.01, 4), amber, 0, rad * 0.75, -rad * 0.6); sp.rotation.x = -0.35; seg.add(sp); }
-    tail.push(seg); parent = seg; off = -rad * 1.05; rad *= 0.84;
+    if (i > 0 && i < 9) { const sp = mesh(cone(0.05 - i * 0.004, 0.16 - i * 0.012, 4), amber, 0, rad * 0.75, -rad * 0.6); sp.rotation.x = -0.4; seg.add(sp); }
+    tail.push(seg); parent = seg; off = -rad * 1.05; rad *= 0.86;
   }
-  const spade = mesh(new THREE.OctahedronGeometry(0.1, 0), amber, 0, 0, -0.2); spade.scale.set(1.5, 0.35, 1.7); tail[N - 1].add(ink(spade, 0.12));
-  const tipGlow = mesh(ico(0.06, 1), glowMat, 0, 0, -0.34); tail[N - 1].add(tipGlow);
+  const spade = mesh(new THREE.OctahedronGeometry(0.1, 0), amber, 0, 0, -0.22); spade.scale.set(1.9, 0.3, 2.6); tail[N - 1].add(ink(spade, 0.12));
+  for (const s of [-1, 1]) { const bb = mesh(cone(0.04, 0.16, 4), amberD, 0.12 * s, 0, -0.14); bb.rotation.z = -1.3 * s; bb.rotation.x = -0.5; tail[N - 1].add(bb); }
+  const tipGlow = mesh(ico(0.07, 1), glowMat, 0, 0, -0.42); tail[N - 1].add(tipGlow);
 
   const st = { phase: 0, squash: 0, flap: 0, lean: 0, wing: 0, wingY: 1.3, t: 0, bob: 0, blink: 3 };
   const eyeGroups = head.children.filter((c) => c.isGroup && c.children.length === 4);
@@ -189,6 +190,6 @@ export function createDragon() {
   return {
     root, update,
     pulse(type) { if (type === 'land') st.squash = 1; else if (type === 'jump') st.squash = -0.5; },
-    snoutWorld(out, yaw) { out.x = Math.sin(yaw) * 0.85; out.z = Math.cos(yaw) * 0.85; out.y = 0.7; },
+    snoutWorld(out, yaw) { out.x = Math.sin(yaw) * 0.95; out.z = Math.cos(yaw) * 0.95; out.y = 0.78; },
   };
 }

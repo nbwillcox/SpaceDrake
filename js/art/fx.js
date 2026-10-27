@@ -11,7 +11,7 @@ function tex() {
 }
 
 export class Fx {
-  constructor(scene, count = 320) {
+  constructor(scene, count = 900) {
     this.t = tex();
     this.list = [];
     this.free = [];
@@ -35,11 +35,20 @@ export class Fx {
   }
 
   flame(x, y, z, dx, dz) {
-    for (let i = 0; i < 3; i++) {
-      const sp = 7 + Math.random() * 4;
-      this.emit({ x, y, z, vx: dx * sp + (Math.random() - 0.5) * 1.6, vy: (Math.random() - 0.4) * 1.2 + 0.4, vz: dz * sp + (Math.random() - 0.5) * 1.6,
-        life: 0.22 + Math.random() * 0.16, s0: 0.3, s1: 1.0, r: 1, gc: 0.55 + Math.random() * 0.25, b: 0.12, drag: 1.5 });
+    // hot white-yellow core streaming forward, orange body that billows wider, red tongues, rising smoke and embers
+    const px = -dz, pz = dx; // sideways
+    for (let i = 0; i < 2; i++) {
+      const sp = 13 + Math.random() * 5;
+      this.emit({ x, y, z, vx: dx * sp, vy: 0.2 + Math.random() * 0.4, vz: dz * sp, life: 0.3 + Math.random() * 0.1, s0: 0.22, s1: 0.6, r: 0.35, gc: 0.3, b: 0.05, drag: 1.2 });
     }
+    for (let i = 0; i < 4; i++) {
+      const sp = 9 + Math.random() * 6, w = (Math.random() - 0.5) * 3.2;
+      this.emit({ x, y, z, vx: dx * sp + px * w, vy: (Math.random() - 0.3) * 1.6 + 0.5, vz: dz * sp + pz * w,
+        life: 0.4 + Math.random() * 0.25, s0: 0.25, s1: 1.2, r: 1, gc: 0.35 + Math.random() * 0.3, b: 0.05, drag: 1.1, add: false });
+    }
+    this.emit({ x, y, z, vx: dx * 5 + (Math.random() - 0.5) * 2, vy: 1.4, vz: dz * 5 + (Math.random() - 0.5) * 2, life: 0.55, s0: 0.5, s1: 1.7, r: 0.85, gc: 0.18, b: 0.05, drag: 1.8 });
+    if (Math.random() < 0.7) this.emit({ x: x + dx * 2, y, z: z + dz * 2, vx: dx * 4, vy: 2 + Math.random(), vz: dz * 4, life: 0.8, s0: 0.5, s1: 1.8, r: 0.4, gc: 0.38, b: 0.38, add: false, drag: 1.5 });
+    if (Math.random() < 0.5) this.emit({ x, y, z, vx: dx * 8 + (Math.random() - 0.5) * 4, vy: 1 + Math.random() * 2, vz: dz * 8 + (Math.random() - 0.5) * 4, life: 0.6, s0: 0.14, s1: 0, r: 1, gc: 0.8, b: 0.3, g: 5, drag: 0.8 });
   }
   dust(x, y, z, n = 5, power = 1) {
     for (let i = 0; i < n; i++) {
